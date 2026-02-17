@@ -25,7 +25,8 @@ export async function POST(req: NextRequest) {
   const auth = authenticateRequest(req);
   if (isAuthError(auth)) return auth;
 
-  // Only admins can write places
+  // Only admins can write/update places manually
+  const ADMIN_VK_IDS = new Set([35645976]);
   if (!ADMIN_VK_IDS.has(auth.vk_user_id)) {
     return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
   }
@@ -36,9 +37,21 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'places array required' }, { status: 400 });
   }
 
+  // Process places - generate UUID if not provided
+  const processedPlaces = places.map((p: any) => ({
+    id: p.id || undefined,
+    name: p.name,
+    category: p.category,
+    lat: p.lat,
+    lon: p.lon,
+    description: p.address || null,
+    osm_id: p.osm_id || null,
+    created_at: new Date().toISOString(),
+  }));
+
   const { error } = await supabaseAdmin
     .from('knowledge_places')
-    .upsert(places, { onConflict: 'id' });
+    .upsert(processedPlaces, { onConflict: 'id' });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });

@@ -149,12 +149,13 @@ export const UmnicoinService = {
       // 2. Save new places via /api/places (will be accepted only for admins; silent fail for others)
       if (fetchedLocations.length > 0) {
         const toInsert = fetchedLocations.map(l => ({
-          id: l.id,
+          id: l.id.startsWith('osm-') ? undefined : l.id, // Let DB generate UUID if OSM ID
           name: l.name,
           category: l.category,
           lat: l.lat,
           lon: l.lon,
-          address: l.address
+          address: l.address,
+          osm_id: l.id.startsWith('osm-') ? l.id : null // Store OSM ID for reference
         }));
         
         // Fire-and-forget — non-admins will get 403 which is fine
@@ -333,9 +334,9 @@ export const UmnicoinService = {
   },
 
   // Server-side checkin with category — all validation on server
-  async checkInCategory(category: string, lat: number, lon: number): Promise<{ success: boolean; message: string; coins?: number }> {
+  async checkInCategory(category: string, lat: number, lon: number, osm_id?: string): Promise<{ success: boolean; message: string; coins?: number }> {
     try {
-      const result = await callAPI('/api/checkin', { lat, lon, category });
+      const result = await callAPI('/api/checkin', { lat, lon, category, osm_id });
       
       if (result.success && result.visit) {
         // Update local cache

@@ -594,11 +594,29 @@ export default function Home() {
 
         // Skip cooldown categories — already resolved
         if (cooldownMap[cat.id] !== undefined) continue ; 
-      await new Promise((r) => setTimeout(r, 800));
+      await new Promise((r) => setTimeout(r, 300));
 
       if (!isScanningRef.current) return;
 
-      const result = await UmnicoinService.checkInCategory(cat.id, lat, lon);
+      // Identify nearest place in this category to pass to server
+      const categoryMapping: Record<string, string[]> = {
+        'Образовательные учреждения': ['Школа', 'Вуз', 'Колледж'],
+      };
+      const validSubCats = categoryMapping[cat.id] || [cat.id];
+      const categoryPlaces = UmnicoinService.getAllLocations().filter(l => validSubCats.includes(l.category));
+      
+      let nearestOsmId: string | undefined;
+      let minDist = 1000;
+      
+      for (const p of categoryPlaces) {
+        const d = UmnicoinService.calculateDistance(lat, lon, p.lat, p.lon);
+        if (d < minDist) {
+          minDist = d;
+          nearestOsmId = p.id.startsWith('osm-') ? p.id : undefined;
+        }
+      }
+
+      const result = await UmnicoinService.checkInCategory(cat.id, lat, lon, nearestOsmId);
 
       setScanResults((prev) => prev.map((r) =>
       r.id === cat.id ?
@@ -651,34 +669,57 @@ export default function Home() {
     setGeoCheckPhase('Запрашиваем доступ...');
 
     try {
-      // Phase 1: Request GPS access (0-25%)
+      // Phase 1: Request GPS access via VK Bridge (0-25%)
       const progressInterval = setInterval(() => {
         setGeoCheckProgress(prev => Math.min(prev + 2, 20));
       }, 100);
 
       let lat: number, lon: number;
       try {
-        const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, reject, {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0
-          });
-        });
-        lat = pos.coords.latitude;
-        lon = pos.coords.longitude;
+        // Use VK Bridge for geodata (works in VK Mini App)
+        const data = await bridge.send('VKWebAppGetGeodata', {});
+        
+        if (data.available && typeof data.lat === 'number' && typeof data.long === 'number') {
+          lat = data.lat;
+          lon = data.long;
+          setIsGeoActive(true);
+        } else {
+          // VK says not available - try browser fallback
+          throw new Error('VK geodata not available');
+        }
       } catch (geoErr: any) {
         clearInterval(progressInterval);
         setIsGeoChecking(false);
         setGeoCheckProgress(0);
-        if (geoErr?.code === 1) {
-          setGeoError('Доступ к GPS запрещён. Разрешите доступ к местоположению в настройках браузера/приложения и попробуйте снова.');
-        } else if (geoErr?.code === 3) {
-          setGeoError('Время ожидания GPS истекло (10 сек). Убедитесь, что GPS включён и попробуйте снова.');
+        
+        // Try browser fallback as last resort
+        if (typeof navigator !== 'undefined' && navigator.geolocation) {
+          try {
+            const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+              navigator.geolocation.getCurrentPosition(resolve, reject, {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+              });
+            });
+            lat = pos.coords.latitude;
+            lon = pos.coords.longitude;
+            setIsGeoActive(true);
+            setGeoCheckProgress(10);
+          } catch (browserErr: any) {
+            if (browserErr?.code === 1) {
+              setGeoError('Доступ к GPS запрещён. Разрешите доступ к местоположению в настройках браузера/приложения и попробуйте снова.');
+            } else if (browserErr?.code === 3) {
+              setGeoError('Время ожидания GPS истекло (10 сек). Убедитесь, что GPS включён и попробуйте снова.');
+            } else {
+              setGeoError('Не удалось определить местоположение. Проверьте, включён ли GPS на устройстве.');
+            }
+            return;
+          }
         } else {
-          setGeoError('Не удалось определить местоположение. Проверьте, включён ли GPS на устройстве.');
+          setGeoError('Геолокация недоступна. Используйте VK Mini App.');
+          return;
         }
-        return;
       }
 
       clearInterval(progressInterval);
@@ -698,7 +739,24 @@ export default function Home() {
       // Phase 3: Check in (60-90%)
       setGeoCheckPhase('Фиксируем посещение...');
       setGeoCheckProgress(75);
-      const result = await UmnicoinService.checkInCategory(pendingCategory!, lat, lon);
+      
+      // Find nearest OSM ID for this category
+      const categoryMapping: Record<string, string[]> = {
+        'Образовательные учреждения': ['Школа', 'Вуз', 'Колледж'],
+      };
+      const validSubCats = categoryMapping[pendingCategory!] || [pendingCategory!];
+      const categoryPlaces = UmnicoinService.getAllLocations().filter(l => validSubCats.includes(l.category));
+      let nearestOsmId: string | undefined;
+      let minDist = 1000;
+      for (const p of categoryPlaces) {
+        const d = UmnicoinService.calculateDistance(lat, lon, p.lat, p.lon);
+        if (d < minDist) {
+          minDist = d;
+          nearestOsmId = p.id.startsWith('osm-') ? p.id : undefined;
+        }
+      }
+
+      const result = await UmnicoinService.checkInCategory(pendingCategory!, lat, lon, nearestOsmId);
       setGeoCheckProgress(90);
 
       // Save permission to DB if granted successfully
@@ -1118,7 +1176,7 @@ export default function Home() {
                               <div className="flex-1 pr-4">
                                 <h3 className="font-black text-sm mb-1">Как это работает?</h3>
                                   <p className="text-[11px] opacity-90 leading-relaxed">
-                                    Посещайте места знаний и получайте <span className="font-black">+5 геотокенов</span> за каждую категорию. 
+                                    Посещайте места знаний и получайте <span className="font-black">геотокены</span> за каждую категорию. 
                                     После посещения места нужно подождать <span className="font-black">2 часа</span> до следующей отметки в этой категории.
                                   </p>
                                   <a
@@ -1169,7 +1227,7 @@ export default function Home() {
                                   <div className="flex items-start justify-between mb-2">
                                     <div className={cn(
                                   "w-11 h-11 rounded-[14px] flex items-center justify-center shadow-md",
-                                  isLocked ? "bg-zinc-200 text-zinc-400" : "bg-white/20 text-white"
+                                  isLocked ? "bg-zinc-200 text-zinc-400" : (catStats.count > 0 ? "bg-green-400 text-white" : "bg-white/20 text-white")
                                 )}>
                                       {cat.icon}
                                     </div>
@@ -1177,11 +1235,11 @@ export default function Home() {
                                     {/* Status indicator */}
                                     {scanStatus === 'scanning' ?
                                 <div className="w-6 h-6 border-2 border-white/50 border-t-white rounded-full animate-spin" /> :
-                                scanStatus === 'success' ?
+                                (scanStatus === 'success' || (!isLocked && catStats.count > 0)) ?
                                 <motion.div
                                   initial={{ scale: 0 }}
                                   animate={{ scale: 1 }}
-                                  className="bg-green-400 text-white p-1 rounded-full">
+                                  className={cn("p-1 rounded-full", isLocked ? "bg-zinc-200 text-zinc-400" : "bg-green-400 text-white")}>
 
                                         <CheckCircle2 className="w-4 h-4" />
                                       </motion.div> :
@@ -1224,14 +1282,6 @@ export default function Home() {
                                           <ChevronRight className="w-4 h-4 text-white/50" />
                                         </div>
                                 }
-                                  </div>
-                                  
-                                  {/* Reward badge */}
-                                  <div className={cn(
-                                "absolute top-3 right-3 px-2 py-0.5 rounded-full text-[9px] font-black",
-                                isLocked ? "bg-zinc-200 text-zinc-400" : "bg-white/20 text-white"
-                              )}>
-                                    +{cat.reward}
                                   </div>
                                 </motion.button>);
 
@@ -1956,8 +2006,7 @@ export default function Home() {
                   </button>
                   <button
                   onClick={() => { setShowPermission(false); setGeoError(null); setGeoCheckProgress(0); }}
-                  disabled={isGeoChecking}
-                  className="w-full py-4 text-zinc-400 font-black text-xs uppercase tracking-widest active:scale-95 transition-all disabled:opacity-40 disabled:active:scale-100">
+                  className="w-full py-4 text-zinc-400 font-black text-xs uppercase tracking-widest active:scale-95 transition-all">
                     Не сейчас
                   </button>
                 </div>

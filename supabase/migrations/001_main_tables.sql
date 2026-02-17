@@ -50,6 +50,7 @@ CREATE TABLE IF NOT EXISTS user_visits (
 -- Места знаний
 CREATE TABLE IF NOT EXISTS knowledge_places (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  osm_id TEXT UNIQUE,
   name TEXT NOT NULL,
   category TEXT NOT NULL,
   lat DOUBLE PRECISION NOT NULL,
@@ -57,6 +58,9 @@ CREATE TABLE IF NOT EXISTS knowledge_places (
   description TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Индекс для поиска по OSM ID
+CREATE INDEX IF NOT EXISTS idx_knowledge_places_osm_id ON knowledge_places(osm_id);
 
 -- Права доступа пользователей
 CREATE TABLE IF NOT EXISTS users_permissions (

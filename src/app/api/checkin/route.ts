@@ -33,10 +33,48 @@ function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: numbe
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
+async function fetchPlaceFromOSM(osmId: string): Promise<any> {
+  // osmId format: "osm-12345"
+  const cleanId = osmId.replace('osm-', '');
+  const query = `[out:json];
+    (
+      node(${cleanId});
+      way(${cleanId});
+      relation(${cleanId});
+    );
+    out center;`;
+  
+  const res = await fetch('https://overpass-api.de/api/interpreter', {
+    method: 'POST',
+    body: query
+  });
+  
+  if (!res.ok) return null;
+  const data = await res.json();
+  const el = data.elements?.[0];
+  if (!el) return null;
+
+  const tags = el.tags || {};
+  let category = 'Школа';
+  if (tags.amenity === 'library') category = 'Библиотека';
+  else if (tags.tourism === 'museum' || tags.tourism === 'gallery') category = 'Музей';
+  else if (tags.amenity === 'university' || tags.amenity === 'college') category = 'Вуз';
+  else if (tags.historic === 'monument' || tags.historic === 'memorial' || tags.tourism === 'artwork') category = 'Памятник';
+
+  return {
+    osm_id: osmId,
+    name: tags.name || tags['name:ru'] || category,
+    category,
+    lat: el.lat || el.center?.lat,
+    lon: el.lon || el.center?.lon,
+    description: tags['addr:street'] ? `${tags['addr:street']}, ${tags['addr:housenumber'] || ''}` : null
+  };
+}
+
 /**
  * POST /api/checkin
  * 
- * Body: { lat: number, lon: number, category?: string }
+ * Body: { lat: number, lon: number, category?: string, osm_id?: string }
  * 
  * If category is provided, does a category-based checkin (5 coins).
  * Otherwise, does a general checkin (2 coins).
@@ -61,7 +99,7 @@ export async function POST(req: NextRequest) {
   }
 
   const body = await req.json();
-  const { lat, lon, category } = body;
+  const { lat, lon, category, osm_id } = body;
 
   if (typeof lat !== 'number' || typeof lon !== 'number' ||
       lat < -90 || lat > 90 || lon < -180 || lon > 180) {
@@ -140,29 +178,91 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // Find nearest place
-  const { data: places } = await supabaseAdmin.from('knowledge_places').select('*');
-  if (!places || places.length === 0) {
-    return NextResponse.json({ success: false, message: 'Нет мест в базе данных' });
-  }
+  let targetPlace: any = null;
 
-  // If category, filter by matching categories
-  const categoryMapping: Record<string, string[]> = {
-    'Образовательные учреждения': ['Школа', 'Вуз', 'Колледж'],
-  };
-  const categoriesToCheck = category ? (categoryMapping[category] || [category]) : undefined;
-
-  let nearest: { place: any; distance: number } | null = null;
-  for (const place of places) {
-    if (categoriesToCheck && !categoriesToCheck.includes(place.category)) continue;
-    const dist = haversineDistance(lat, lon, place.lat, place.lon);
-    if (!nearest || dist < nearest.distance) {
-      nearest = { place, distance: dist };
+  if (osm_id) {
+    // 1. Try to find by osm_id in DB
+    const { data: existingPlace } = await supabaseAdmin
+      .from('knowledge_places')
+      .select('*')
+      .eq('osm_id', osm_id)
+      .single();
+    
+    if (existingPlace) {
+      targetPlace = existingPlace;
+    } else {
+      // 2. Fetch from OSM and verify
+      const osmPlace = await fetchPlaceFromOSM(osm_id);
+      if (osmPlace) {
+        // Save to DB so it becomes trusted
+        const { data: savedPlace, error: saveError } = await supabaseAdmin
+          .from('knowledge_places')
+          .insert(osmPlace)
+          .select()
+          .single();
+        
+        if (!saveError && savedPlace) {
+          targetPlace = savedPlace;
+        }
+      }
     }
   }
 
-  if (!nearest || nearest.distance > CHECKIN_RADIUS_M) {
-    return NextResponse.json({ success: false, message: 'Вы слишком далеко от места знаний' });
+  if (!targetPlace) {
+    // Fallback: search by proximity (original logic)
+    const searchRadiusM = 500;
+    const { data: nearbyPlaces } = await supabaseAdmin
+      .from('knowledge_places')
+      .select('*')
+      .gte('lat', lat - 0.005)
+      .lte('lat', lat + 0.005)
+      .gte('lon', lon - 0.005)
+      .lte('lon', lon + 0.005);
+
+    if (nearbyPlaces && nearbyPlaces.length > 0) {
+      const categoryMapping: Record<string, string[]> = {
+        'Образовательные учреждения': ['Школа', 'Вуз', 'Колледж'],
+        'Библиотека': ['Библиотека'],
+        'Музей': ['Музей'],
+        'Памятник': ['Памятник', 'Монумент'],
+      };
+      const categoriesToCheck = category ? (categoryMapping[category] || [category]) : undefined;
+
+      let nearest: { place: any; distance: number } | null = null;
+      for (const place of nearbyPlaces) {
+        if (categoriesToCheck && !categoriesToCheck.includes(place.category)) continue;
+        const dist = haversineDistance(lat, lon, place.lat, place.lon);
+        if (dist <= searchRadiusM && (!nearest || dist < nearest.distance)) {
+          nearest = { place, distance: dist };
+        }
+      }
+      if (nearest) targetPlace = nearest.place;
+    }
+  }
+
+  if (!targetPlace) {
+    return NextResponse.json({ success: false, message: 'Место знаний не найдено или не подтверждено.' });
+  }
+
+  // Distance check using TRUSTED coordinates
+  const distance = haversineDistance(lat, lon, targetPlace.lat, targetPlace.lon);
+
+  if (distance > CHECKIN_RADIUS_M) {
+    return NextResponse.json({ success: false, message: 'Вы слишком далеко от места знаний. Подойдите ближе.' });
+  }
+
+  // Check category match if requested
+  if (category) {
+    const categoryMapping: Record<string, string[]> = {
+      'Образовательные учреждения': ['Школа', 'Вуз', 'Колледж'],
+      'Библиотека': ['Библиотека'],
+      'Музей': ['Музей'],
+      'Памятник': ['Памятник', 'Монумент'],
+    };
+    const validCategories = categoryMapping[category] || [category];
+    if (!validCategories.includes(targetPlace.category)) {
+      return NextResponse.json({ success: false, message: `Это место не относится к категории "${category}"` });
+    }
   }
 
   // Everything validated! Compute reward and update atomically
@@ -206,37 +306,37 @@ export async function POST(req: NextRequest) {
     // Insert visit record
     await supabaseAdmin.from('user_visits').insert({
       user_id: vkId,
-      place_id: nearest.place.id,
-      location_name: nearest.place.name,
-      category: nearest.place.category,
+      place_id: targetPlace.id,
+      location_name: targetPlace.name,
+      category: targetPlace.category,
       coins_earned: coinsEarned,
       timestamp: nowIso,
-      lat: nearest.place.lat,
-      lon: nearest.place.lon,
+      lat: targetPlace.lat,
+      lon: targetPlace.lon,
     });
 
     auditLog(vkId, 'checkin', {
-      place_id: nearest.place.id,
-      place_name: nearest.place.name,
-      category: nearest.place.category,
+      place_id: targetPlace.id,
+      place_name: targetPlace.name,
+      category: targetPlace.category,
       coins: coinsEarned,
-      distance_m: Math.round(nearest.distance),
+      distance_m: Math.round(distance),
       balance_after: newMinedBalance,
     });
 
   return NextResponse.json({
     success: true,
-    message: `Вы посетили "${nearest.place.name}"`,
+    message: `Вы посетили "${targetPlace.name}"`,
     coins: coinsEarned,
     balance: newMinedBalance,
     visit: {
-      locationId: nearest.place.id,
-      locationName: nearest.place.name,
-      category: nearest.place.category,
+      locationId: targetPlace.id,
+      locationName: targetPlace.name,
+      category: targetPlace.category,
       timestamp: Date.now(),
       coinsEarned,
-      lat: nearest.place.lat,
-      lon: nearest.place.lon,
+      lat: targetPlace.lat,
+      lon: targetPlace.lon,
     },
     stats: {
       visitsToday: newVisitsToday,

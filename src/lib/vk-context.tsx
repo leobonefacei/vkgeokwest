@@ -44,10 +44,10 @@ export function VKProvider({ children }: { children: ReactNode }) {
       })
       .catch((err) => {
         console.error('VK Bridge Init Error:', err);
-        setInitialized(true); // Signal that we can proceed with fallbacks
         // Fallback for development outside VK
-        if (process.env.NODE_ENV === 'development') {
-           setUser({
+        if (typeof window !== 'undefined' && (process.env.NODE_ENV === 'development' || !window.location.href.includes('vk.com'))) {
+          console.log('Using fallback user for development');
+          setUser({
             id: 1,
             first_name: 'Иван',
             last_name: 'Иванов',
@@ -59,6 +59,7 @@ export function VKProvider({ children }: { children: ReactNode }) {
             bdate: '01.01.1990'
           } as any);
         }
+        setInitialized(true);
       });
   }, [searchParams]);
 
