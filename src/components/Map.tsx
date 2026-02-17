@@ -121,7 +121,6 @@ export default function KnowledgeMap(props: MapProps) {
           center: [centerPos[1], centerPos[0]],
           zoom: 16,
           pitch: 55,
-          bearing: -15,
           language: 'ru',
           attributionControl: false,
           navigationControl: false,
