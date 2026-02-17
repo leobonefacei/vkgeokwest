@@ -36,17 +36,25 @@ export async function GET(req: NextRequest) {
 
       if (profile.is_private || isBlockedByThem) {
         return {
-          ...profile,
-          last_lat: undefined,
-          last_lon: undefined,
-          last_category: undefined,
-          last_location_name: undefined,
-          last_mined_at: undefined,
-          is_private: profile.is_private,
+          vk_id: profile.vk_id,
+          first_name: profile.first_name,
+          last_name: profile.last_name,
+          photo_200: profile.photo_200,
+          is_private: true,
           is_blocked_by_them: isBlockedByThem,
+          // Sensitive data hidden
+          last_lat: null,
+          last_lon: null,
+          last_category: null,
+          last_location_name: null,
+          last_mined_at: null,
         };
       }
-      return profile;
+      return {
+        ...profile,
+        is_private: false,
+        is_blocked_by_them: isBlockedByThem,
+      };
     });
 
     return NextResponse.json({ data: result });

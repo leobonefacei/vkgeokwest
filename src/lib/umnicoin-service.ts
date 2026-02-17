@@ -176,77 +176,42 @@ export const UmnicoinService = {
   },
 
   async syncUserVisits(vkId: number) {
-    if (!supabase) return;
     try {
-      // Sync stats from DB (read-only via proxy)
-      const { data: dbStats } = await supabase
-        .from('user_stats')
-        .select('*')
-        .eq('user_id', vkId)
-        .single();
+      const result = await callAPI('/api/my-stats', {});
       
-      const stats = this.getUserData();
-      const currentMskDay = getMskDay();
-      const currentMskWeek = getMskWeek();
-      
-      if (dbStats) {
-        stats.balance = dbStats.mined_balance || 0;
-        stats.visitsToday = dbStats.visits_today || 0;
-        stats.visitsThisWeek = dbStats.visits_this_week || 0;
-        stats.weeklyDays = dbStats.weekly_days || 0;
-        stats.lastCheckIn = dbStats.last_check_in ? new Date(dbStats.last_check_in).getTime() : 0;
-        stats.categoryCooldowns = dbStats.category_cooldowns || {};
-        stats.dailyClaimed = dbStats.daily_claimed || false;
-        stats.weeklyClaimed = dbStats.weekly_claimed || false;
+      if (result?.stats) {
+        const stats = this.getUserData();
         
-        const savedDailyReset = dbStats.last_daily_reset || '';
-        const savedWeeklyReset = dbStats.last_weekly_reset || '';
+        stats.balance = result.stats.balance || 0;
+        stats.visitsToday = result.stats.visitsToday || 0;
+        stats.visitsThisWeek = result.stats.visitsThisWeek || 0;
+        stats.weeklyDays = result.stats.weeklyDays || 0;
+        stats.lastCheckIn = result.stats.lastCheckIn || 0;
+        stats.categoryCooldowns = result.stats.categoryCooldowns || {};
+        stats.dailyClaimed = result.stats.dailyClaimed || false;
+        stats.weeklyClaimed = result.stats.weeklyClaimed || false;
+        stats.lastDailyReset = getMskDay();
+        stats.lastWeeklyReset = getMskWeek();
         
-        let needsUpdate = false;
-        if (savedDailyReset !== currentMskDay) {
-          stats.visitsToday = 0;
-          stats.dailyClaimed = false;
-          stats.lastDailyReset = currentMskDay;
-          needsUpdate = true;
+        if (result.visits) {
+          stats.history = result.visits.map((dv: any) => ({
+            id: dv.id,
+            locationId: dv.place_id,
+            locationName: dv.location_name || 'Неизвестное место',
+            category: dv.category || 'Образование',
+            timestamp: new Date(dv.timestamp).getTime(),
+            coinsEarned: dv.coins_earned,
+            lat: dv.lat,
+            lon: dv.lon
+          }));
         }
         
-        if (savedWeeklyReset !== currentMskWeek) {
-          stats.visitsThisWeek = 0;
-          stats.weeklyDays = 0;
-          stats.weeklyClaimed = false;
-          stats.lastWeeklyReset = currentMskWeek;
-          needsUpdate = true;
-        }
-        
-        if (needsUpdate) {
-          await this.updateUserStats(vkId, stats);
-        }
-      } else {
-        stats.lastDailyReset = currentMskDay;
-        stats.lastWeeklyReset = currentMskWeek;
-        await this.updateUserStats(vkId, stats);
+        this.saveUserData(stats);
       }
-
-      const { data: dbVisits } = await supabase
-        .from('user_visits')
-        .select('*')
-        .eq('user_id', vkId)
-        .order('timestamp', { ascending: false });
-      
-      if (dbVisits) {
-        stats.history = dbVisits.map((dv: any) => ({
-          id: dv.id,
-          locationId: dv.place_id,
-          locationName: dv.location_name || 'Неизвестное место',
-          category: dv.category || 'Образование',
-          timestamp: new Date(dv.timestamp).getTime(),
-          coinsEarned: dv.coins_earned,
-          lat: dv.lat,
-          lon: dv.lon
-        }));
-      }
-      this.saveUserData(stats);
     } catch (err) {
+      console.error('Failed to sync data:', err);
+    }
+  },
       console.error('Failed to sync data:', err);
     }
   },
@@ -465,32 +430,19 @@ export const UmnicoinService = {
   },
 
   async getRealRanking() {
-    if (!supabase) return [];
     try {
-      const { data, error } = await supabase
-        .from('user_stats')
-        .select(`
-          user_id,
-          mined_balance,
-          profiles (
-            first_name,
-            last_name,
-            photo_200
-          )
-        `)
-        .order('mined_balance', { ascending: false })
-        .order('user_id', { ascending: true })
-        .limit(50);
-
-      if (error) throw error;
-
-      return data.map((row: any) => ({
-        id: row.user_id,
-        name: row.profiles ? `${row.profiles.first_name} ${row.profiles.last_name[0]}.` : `ID: ${row.user_id}`,
-        points: row.mined_balance || 0,
-        avatar: row.profiles?.photo_200,
-        isMe: row.user_id === Number(localStorage.getItem('vk_user_id'))
-      }));
+      const result = await callAPI('/api/ranking', {});
+      
+      if (result?.data) {
+        return result.data.map((row: any) => ({
+          id: row.id,
+          name: row.name || `ID: ${row.id}`,
+          points: row.points || 0,
+          avatar: row.avatar,
+          isMe: row.isMe || false
+        }));
+      }
+      return [];
     } catch (err) {
       console.error('Failed to fetch ranking:', err);
       return [];

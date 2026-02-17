@@ -7,26 +7,24 @@ import { auditLog } from '@/lib/audit-log';
 // Admin VK IDs — these users can modify other users' data
 const ADMIN_VK_IDS = new Set([35645976]);
 
-// Tables that require user-scoping (writes must be bound to verified user)
+// Tables that require user-scoping for writes (protected tables removed from API)
+// These tables are now only accessible via dedicated endpoints:
+//   - user_stats → /api/checkin, /api/claim-goal, /api/my-stats
+//   - user_visits → /api/checkin, /api/my-stats
+//   - profiles → /api/profiles
+//   - users_permissions → /api/permissions
+//   - follows → /api/friends
 const USER_SCOPED_TABLES: Record<string, { idColumn: string }> = {
-  user_stats: { idColumn: 'user_id' },
-  user_visits: { idColumn: 'user_id' },
-  users_permissions: { idColumn: 'vk_id' },
-  profiles: { idColumn: 'vk_id' },
-  follows: { idColumn: 'follower_id' },
   zombie_entities: { idColumn: 'owner_vk_id' },
   zombie_world_objects: { idColumn: 'placed_by' },
   zombie_game_sessions: { idColumn: 'vk_id' },
 };
 
 // Tables allowed for read (select) by any authenticated user
+// SECURITY: Sensitive tables (user_stats, user_visits, profiles) are removed
+// Use dedicated endpoints instead: /api/ranking, /api/my-stats, /api/my-visits
 const READ_ALLOWED_TABLES = new Set([
   'knowledge_places',
-  'user_stats',
-  'user_visits',
-  'users_permissions',
-  'profiles',
-  'follows',
   'zombie_stats',
   'zombie_entities',
   'zombie_world_objects',
@@ -37,15 +35,11 @@ const READ_ALLOWED_TABLES = new Set([
 ]);
 
 // Tables allowed for write operations by authenticated users
-// SECURITY: Tables that affect leaderboard/balance are NOT here:
-//   - user_stats → /api/checkin, /api/claim-goal (server-validated)
-//   - user_visits → /api/checkin (server-validated)
+// SECURITY: 
+//   - user_stats, user_visits, profiles, users_permissions, follows → protected, use dedicated endpoints
 //   - zombie_stats → /api/zombie-stats (server-validated)
 //   - knowledge_places → /api/places (admin-only writes)
 const WRITE_ALLOWED_TABLES = new Set([
-  'users_permissions',
-  'profiles',
-  'follows',
   'zombie_entities',
   'zombie_world_objects',
   'zombie_scenario_presets',
