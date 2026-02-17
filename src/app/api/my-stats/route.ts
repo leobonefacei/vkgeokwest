@@ -18,11 +18,30 @@ export async function GET(req: NextRequest) {
     .single();
 
   // Get user's stats
-  const { data: stats } = await supabaseAdmin
+  let { data: stats, error: statsError } = await supabaseAdmin
     .from('user_stats')
     .select('*')
     .eq('user_id', vkId)
     .single();
+
+  if (statsError && statsError.code === 'PGRST116') {
+    // Stats missing - create them
+    console.log('[api/my-stats] Creating missing stats for:', vkId);
+    const { data: newStats, error: createError } = await supabaseAdmin
+      .from('user_stats')
+      .insert({
+        user_id: vkId,
+        balance: 0,
+        mined_balance: 0,
+        visits_today: 0,
+        visits_this_week: 0,
+        updated_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+    
+    if (!createError) stats = newStats;
+  }
 
   // Get recent visits (last 20)
   const { data: visits } = await supabaseAdmin

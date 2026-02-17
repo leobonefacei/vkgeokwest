@@ -62,8 +62,15 @@ export async function POST(req: NextRequest) {
     const { first_name, last_name, photo_200 } = payload;
     const vkId = auth.vk_user_id;
 
+    console.log('[api/profiles] Upserting profile for:', vkId, first_name, last_name);
+
     // SECURITY: Validate photo_200 — only VK CDN domains allowed
-    const profileData: any = { vk_id: vkId, first_name, last_name };
+    const profileData: any = { 
+      vk_id: vkId, 
+      first_name: first_name || 'Пользователь', 
+      last_name: last_name || '',
+      updated_at: new Date().toISOString()
+    };
     if (photo_200 && isAllowedPhotoUrl(photo_200)) {
       profileData.photo_200 = photo_200;
     }
