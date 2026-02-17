@@ -58,6 +58,12 @@ export function VKProvider({ children }: { children: ReactNode }) {
             sex: 2,
             bdate: '01.01.1990'
           } as any);
+          
+          // Create mock launch params for development (will bypass signature check in dev mode)
+          const mockParams = 'vk_user_id=1&vk_app_id=53317461&vk_platform=desktop_web&sign=dev_mode';
+          _rawLaunchParams = mockParams;
+          setRawLaunchParams(mockParams);
+          console.log('[VKContext] Set mock launch params for development');
         }
         setInitialized(true);
       });

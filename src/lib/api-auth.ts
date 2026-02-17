@@ -7,6 +7,8 @@ import { verifyLaunchParams, VerifiedUser } from './vk-auth';
  */
 export function authenticateRequest(req: NextRequest): VerifiedUser | NextResponse {
   const launchParams = req.headers.get('x-launch-params') || '';
+  
+  console.log('[api-auth] Launch params:', launchParams ? 'present' : 'missing');
 
   if (!launchParams) {
     return NextResponse.json({ error: 'Missing launch params' }, { status: 401 });

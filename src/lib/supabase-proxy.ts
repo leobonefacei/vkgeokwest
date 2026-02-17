@@ -80,13 +80,21 @@ class QueryBuilder {
       const headers: Record<string, string> = { 'Content-Type': 'application/json' };
       const lp = getRawLaunchParams();
       if (lp) headers['X-Launch-Params'] = lp;
+      
+      console.log(`[SupabaseProxy] ${this._operation} on ${this._table}`, { 
+        lp: lp ? `present (${lp.length} chars)` : 'missing',
+        lpPreview: lp ? lp.substring(0, 100) + '...' : 'N/A'
+      });
 
       // Protected tables routing
       if (this._table === 'user_stats' || this._table === 'user_visits') {
         // Use /api/my-stats for user data
         if (this._operation === 'select') {
+          console.log('[SupabaseProxy] Routing to /api/my-stats');
           const res = await fetch('/api/my-stats', { method: 'GET', headers });
+          console.log('[SupabaseProxy] /api/my-stats response:', res.status);
           const result = await res.json();
+          console.log('[SupabaseProxy] /api/my-stats result:', result);
           
           // Transform response to match supabase format
           if (this._table === 'user_stats') {
