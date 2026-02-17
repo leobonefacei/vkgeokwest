@@ -74,7 +74,8 @@ export async function GET(req: NextRequest) {
   return NextResponse.json({
     profile: profile || null,
     stats: {
-      balance: stats?.mined_balance || 0,
+      balance: stats?.balance || 0,
+      minedBalance: stats?.mined_balance || 0,
       visitsToday,
       visitsThisWeek,
       weeklyDays: stats?.weekly_days || 0,

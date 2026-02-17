@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
     .from('user_stats')
     .select(`
       user_id,
-      mined_balance,
+      balance,
       profiles (
         first_name,
         last_name,
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
         is_private
       )
     `)
-    .order('mined_balance', { ascending: false })
+    .order('balance', { ascending: false })
     .order('user_id', { ascending: true })
     .limit(50);
 
@@ -36,10 +36,40 @@ export async function GET(req: NextRequest) {
       id: row.user_id,
       name: isPrivate ? 'Приватный профиль' : (row.profiles ? `${row.profiles.first_name} ${row.profiles.last_name?.[0]}.` : `ID: ${row.user_id}`),
       avatar: isPrivate ? null : row.profiles?.photo_200,
-      points: row.mined_balance || 0,
+      points: row.balance || 0,
       isMe: row.user_id === currentUserId
     };
   });
+
+  // Ensure current user is in the response if not in top 50
+  const isUserInTop50 = ranking.some(r => r.isMe);
+  if (!isUserInTop50) {
+    const { data: userStats } = await supabaseAdmin
+      .from('user_stats')
+      .select(`
+        user_id,
+        balance,
+        profiles (
+          first_name,
+          last_name,
+          photo_200,
+          is_private
+        )
+      `)
+      .eq('user_id', currentUserId)
+      .single();
+    
+    if (userStats) {
+      ranking.push({
+        id: userStats.user_id,
+        name: userStats.profiles?.is_private ? 'Приватный профиль' : (userStats.profiles ? `${userStats.profiles.first_name} ${userStats.profiles.last_name?.[0]}.` : `ID: ${userStats.user_id}`),
+        avatar: userStats.profiles?.is_private ? null : userStats.profiles?.photo_200,
+        points: userStats.balance || 0,
+        isMe: true,
+        rank: '?'
+      });
+    }
+  }
 
   return NextResponse.json({ data: ranking });
 }
