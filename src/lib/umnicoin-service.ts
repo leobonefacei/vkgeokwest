@@ -428,7 +428,12 @@ export const UmnicoinService = {
 
   async getRealRanking() {
     try {
-      const result = await callAPI('/api/ranking', {});
+      const headers: Record<string, string> = {};
+      const lp = getRawLaunchParams();
+      if (lp) headers['X-Launch-Params'] = lp;
+      
+      const res = await fetch('/api/ranking', { headers });
+      const result = await res.json();
       
       if (result?.data) {
         return result.data.map((row: any) => ({

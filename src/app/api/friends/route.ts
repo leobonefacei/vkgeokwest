@@ -121,43 +121,63 @@ export async function POST(req: NextRequest) {
   const auth = authenticateRequest(req);
   if (isAuthError(auth)) return auth;
 
-  const body = await req.json();
-  const { action } = body;
-  const vkId = auth.vk_user_id;
+  try {
+    const body = await req.json();
+    const { action } = body;
+    const vkId = auth.vk_user_id;
 
-  if (action === 'follow') {
-    const { following_id } = body;
-    // Follower is always the verified user
-    const { error } = await supabaseAdmin.from('follows').upsert(
-      { follower_id: vkId, following_id, is_blocked: false },
-      { onConflict: 'follower_id,following_id' }
-    );
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ success: true });
+    console.log('[api/friends] POST action:', action, 'user:', vkId, 'body:', body);
+
+    if (action === 'follow') {
+      const { following_id } = body;
+      if (!following_id) return NextResponse.json({ error: 'following_id required' }, { status: 400 });
+      
+      const { error } = await supabaseAdmin.from('follows').upsert(
+        { follower_id: vkId, following_id, is_blocked: false },
+        { onConflict: 'follower_id,following_id' }
+      );
+      if (error) {
+        console.error('[api/friends] follow error:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    if (action === 'unfollow') {
+      const { following_id } = body;
+      if (!following_id) return NextResponse.json({ error: 'following_id required' }, { status: 400 });
+
+      const { error } = await supabaseAdmin
+        .from('follows')
+        .delete()
+        .eq('follower_id', vkId)
+        .eq('following_id', following_id);
+      if (error) {
+        console.error('[api/friends] unfollow error:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    if (action === 'toggle_block') {
+      const { follower_id, is_blocked } = body;
+      if (!follower_id) return NextResponse.json({ error: 'follower_id required' }, { status: 400 });
+
+      const { error } = await supabaseAdmin
+        .from('follows')
+        .update({ is_blocked })
+        .eq('following_id', vkId)
+        .eq('follower_id', follower_id);
+      if (error) {
+        console.error('[api/friends] toggle_block error:', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      return NextResponse.json({ success: true });
+    }
+
+    return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
+  } catch (err: any) {
+    console.error('[api/friends] critical error:', err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
-
-  if (action === 'unfollow') {
-    const { following_id } = body;
-    const { error } = await supabaseAdmin
-      .from('follows')
-      .delete()
-      .eq('follower_id', vkId)
-      .eq('following_id', following_id);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ success: true });
-  }
-
-  if (action === 'toggle_block') {
-    const { follower_id, is_blocked } = body;
-    // User can only block/unblock on their own "following_id" row
-    const { error } = await supabaseAdmin
-      .from('follows')
-      .update({ is_blocked })
-      .eq('following_id', vkId)
-      .eq('follower_id', follower_id);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    return NextResponse.json({ success: true });
-  }
-
-  return NextResponse.json({ error: 'Unknown action' }, { status: 400 });
 }

@@ -70,7 +70,11 @@ export const FriendService = {
 
   async getProfile(vkId: number): Promise<FriendProfile | null> {
     try {
-      const result = await fetch(`/api/profiles?vk_id=${vkId}`);
+      const headers: Record<string, string> = {};
+      const lp = getRawLaunchParams();
+      if (lp) headers['X-Launch-Params'] = lp;
+      
+      const result = await fetch(`/api/profiles?vk_id=${vkId}`, { headers });
       const data = await result.json();
       return data?.data || null;
     } catch (err) {
@@ -104,7 +108,11 @@ export const FriendService = {
 
   async getFollowing(followerId: number): Promise<FriendProfile[]> {
     try {
-      const result = await fetch('/api/friends?action=following');
+      const headers: Record<string, string> = {};
+      const lp = getRawLaunchParams();
+      if (lp) headers['X-Launch-Params'] = lp;
+      
+      const result = await fetch('/api/friends?action=following', { headers });
       const data = await result.json();
       return data?.data || [];
     } catch (err) {
@@ -115,7 +123,11 @@ export const FriendService = {
 
   async getFollowers(followingId: number): Promise<FriendProfile[]> {
     try {
-      const result = await fetch('/api/friends?action=followers');
+      const headers: Record<string, string> = {};
+      const lp = getRawLaunchParams();
+      if (lp) headers['X-Launch-Params'] = lp;
+      
+      const result = await fetch('/api/friends?action=followers', { headers });
       const data = await result.json();
       return data?.data || [];
     } catch (err) {
@@ -126,7 +138,11 @@ export const FriendService = {
 
   async getFriendHistory(vkId: number, limit = 3) {
     try {
-      const result = await fetch(`/api/friends?action=history&vk_id=${vkId}&limit=${limit}`);
+      const headers: Record<string, string> = {};
+      const lp = getRawLaunchParams();
+      if (lp) headers['X-Launch-Params'] = lp;
+      
+      const result = await fetch(`/api/friends?action=history&vk_id=${vkId}&limit=${limit}`, { headers });
       const data = await result.json();
       return data?.data || [];
     } catch (err) {
