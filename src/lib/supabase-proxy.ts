@@ -1,5 +1,5 @@
 // Client-side Supabase proxy — mimics supabase-js chaining API
-// but sends all queries through /api/db server route (no anon key on client)
+// Routes protected tables to dedicated endpoints for security
 
 import { getRawLaunchParams } from './vk-context';
 
@@ -24,7 +24,6 @@ class QueryBuilder {
   }
 
   select(columns: string = '*') {
-    // If called after insert/upsert/update, don't override operation — just set select option
     if (this._operation === 'select' || !this._data) {
       this._operation = 'select';
     }
@@ -82,6 +81,108 @@ class QueryBuilder {
       const lp = getRawLaunchParams();
       if (lp) headers['X-Launch-Params'] = lp;
 
+      // Protected tables routing
+      if (this._table === 'user_stats' || this._table === 'user_visits') {
+        // Use /api/my-stats for user data
+        if (this._operation === 'select') {
+          const res = await fetch('/api/my-stats', { method: 'GET', headers });
+          const result = await res.json();
+          
+          // Transform response to match supabase format
+          if (this._table === 'user_stats') {
+            const statsData = result.stats ? [{
+              user_id: result.profile?.vk_id,
+              mined_balance: result.stats.balance,
+              visits_today: result.stats.visitsToday,
+              visits_this_week: result.stats.visitsThisWeek,
+              weekly_days: result.stats.weeklyDays,
+              last_check_in: result.stats.lastCheckIn,
+              category_cooldowns: result.stats.categoryCooldowns,
+              daily_claimed: result.stats.dailyClaimed,
+              weekly_claimed: result.stats.weeklyClaimed,
+              last_daily_reset: result.stats.lastDailyReset,
+              last_weekly_reset: result.stats.lastWeeklyReset,
+            }] : [];
+            resolve({ data: this._options.single ? statsData[0] : statsData, error: null });
+          } else {
+            // user_visits
+            resolve({ data: result.visits || [], error: null });
+          }
+          return;
+        }
+        
+        // For write operations, fallback to /api/db (should use dedicated endpoints)
+        resolve({ data: null, error: { message: `Write to ${this._table} not supported via proxy. Use dedicated API.` } });
+        return;
+      }
+
+      if (this._table === 'profiles') {
+        // Extract vk_id from filters if present
+        const vkIdFilter = this._filters.find(f => f.type === 'eq' && f.column === 'vk_id');
+        
+        if (this._operation === 'select' && vkIdFilter) {
+          const res = await fetch(`/api/profiles?vk_id=${vkIdFilter.value}`, { method: 'GET', headers });
+          const result = await res.json();
+          resolve({ data: this._options.single ? result.data : [result.data], error: result.error });
+          return;
+        }
+        
+        // For upsert/update, use /api/profiles with action
+        if (this._operation === 'upsert' || this._operation === 'update') {
+          const action = this._operation === 'upsert' ? 'upsert' : 'update_last_mined';
+          const res = await fetch('/api/profiles', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ action, ...this._data }),
+          });
+          const result = await res.json();
+          resolve({ data: result.success ? this._data : null, error: result.error });
+          return;
+        }
+      }
+
+      if (this._table === 'follows') {
+        // Use /api/friends
+        if (this._operation === 'select') {
+          // Determine action from context (following or followers)
+          const followerFilter = this._filters.find(f => f.type === 'eq' && f.column === 'follower_id');
+          const followingFilter = this._filters.find(f => f.type === 'eq' && f.column === 'following_id');
+          
+          let action = 'following';
+          if (followingFilter && !followerFilter) action = 'followers';
+          
+          const res = await fetch(`/api/friends?action=${action}`, { method: 'GET', headers });
+          const result = await res.json();
+          resolve({ data: result.data || [], error: null });
+          return;
+        }
+        
+        if (this._operation === 'upsert') {
+          const isFollow = this._data.is_blocked === false;
+          const action = isFollow ? 'follow' : 'toggle_block';
+          const res = await fetch('/api/friends', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ action, ...this._data }),
+          });
+          const result = await res.json();
+          resolve({ data: result.success ? this._data : null, error: result.error });
+          return;
+        }
+        
+        if (this._operation === 'delete') {
+          const res = await fetch('/api/friends', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ action: 'unfollow', following_id: this._filters.find(f => f.column === 'following_id')?.value }),
+          });
+          const result = await res.json();
+          resolve({ data: result.success ? {} : null, error: result.error });
+          return;
+        }
+      }
+
+      // Default: use /api/db for allowed tables (knowledge_places, etc.)
       const res = await fetch('/api/db', {
         method: 'POST',
         headers,

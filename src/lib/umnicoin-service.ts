@@ -212,9 +212,6 @@ export const UmnicoinService = {
       console.error('Failed to sync data:', err);
     }
   },
-      console.error('Failed to sync data:', err);
-    }
-  },
 
   // Only sends non-balance fields via /api/user-stats (balance changes go through /api/checkin and /api/claim-goal)
   async updateUserStats(vkId: number, stats: Partial<UserStats>) {
