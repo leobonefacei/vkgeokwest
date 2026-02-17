@@ -132,6 +132,7 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>('main');
   const [stats, setStats] = useState<UserStats>(UmnicoinService.getDefaultStats());
   const [userPos, setUserPos] = useState<[number, number]>(RED_SQUARE);
+  const [locations, setLocations] = useState<Location[]>([]);
   const [nearest, setNearest] = useState<{location: Location;distance: number;} | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [messageType, setMessageType] = useState<'info' | 'error'>('info');
@@ -580,7 +581,8 @@ export default function Home() {
     if (!isScanningRef.current) return;
 
     // Fetch real locations from Overpass API before checking categories
-    await UmnicoinService.fetchNearbyRealLocations(lat, lon);
+    const fetchedLocations = await UmnicoinService.fetchNearbyRealLocations(lat, lon);
+    setLocations(fetchedLocations);
 
 
 
@@ -603,7 +605,7 @@ export default function Home() {
         'Образовательные учреждения': ['Школа', 'Вуз', 'Колледж'],
       };
       const validSubCats = categoryMapping[cat.id] || [cat.id];
-      const categoryPlaces = UmnicoinService.getAllLocations().filter(l => validSubCats.includes(l.category));
+      const categoryPlaces = locations.filter(l => validSubCats.includes(l.category));
       
       let nearestOsmId: string | undefined;
       let minDist = 1000;
@@ -733,7 +735,8 @@ export default function Home() {
       // Phase 2: Fetch locations (30-60%)
       setGeoCheckProgress(40);
       setGeoCheckPhase('Проверяем ближайшие места...');
-      await UmnicoinService.fetchNearbyRealLocations(lat, lon);
+      const fetchedLocations = await UmnicoinService.fetchNearbyRealLocations(lat, lon);
+      setLocations(fetchedLocations);
       setGeoCheckProgress(65);
 
       // Phase 3: Check in (60-90%)
@@ -745,7 +748,7 @@ export default function Home() {
         'Образовательные учреждения': ['Школа', 'Вуз', 'Колледж'],
       };
       const validSubCats = categoryMapping[pendingCategory!] || [pendingCategory!];
-      const categoryPlaces = UmnicoinService.getAllLocations().filter(l => validSubCats.includes(l.category));
+      const categoryPlaces = fetchedLocations.filter(l => validSubCats.includes(l.category));
       let nearestOsmId: string | undefined;
       let minDist = 1000;
       for (const p of categoryPlaces) {
@@ -968,7 +971,7 @@ export default function Home() {
 
                   <Map
                 userPos={userPos}
-                locations={UmnicoinService.getAllLocations()}
+                locations={locations}
                 friends={following}
                 offsetY={isExpanded ? 50 : 0}
                 onFriendClick={handleFriendClick}
