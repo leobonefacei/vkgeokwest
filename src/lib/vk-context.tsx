@@ -27,12 +27,20 @@ export function VKProvider({ children }: { children: ReactNode }) {
   const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
-    const rawParams = searchParams.toString();
-    _rawLaunchParams = rawParams;
-    setRawLaunchParams(rawParams);
+    // 1. Try to get params from window.location if useSearchParams is empty
+    let rawParams = searchParams.toString();
+    if (!rawParams && typeof window !== 'undefined') {
+      rawParams = window.location.search.replace(/^\?/, '');
+    }
+    
+    if (rawParams) {
+      console.log('[VKProvider] Captured launch params, length:', rawParams.length);
+      _rawLaunchParams = rawParams;
+      setRawLaunchParams(rawParams);
 
-    const params = parseURLSearchParamsForGetLaunchParams(rawParams);
-    setLaunchParams(params);
+      const params = parseURLSearchParamsForGetLaunchParams(rawParams);
+      setLaunchParams(params);
+    }
 
     bridge.send('VKWebAppInit')
       .then(() => {

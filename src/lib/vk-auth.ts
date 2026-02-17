@@ -50,10 +50,10 @@ export function verifyLaunchParams(searchParams: string): VerifiedUser | null {
     vkParams.sort((a, b) => a.key.localeCompare(b.key));
 
     const queryString = vkParams
-      .map(({ key, value }) => `${encodeURIComponent(key)}=${encodeURIComponent(value)}`)
+      .map(({ key, value }) => `${key}=${value}`)
       .join('&');
 
-    // HMAC-SHA256 with Base64URL encoding
+    // HMAC-SHA256
     const hash = crypto
       .createHmac('sha256', VK_SECRET)
       .update(queryString)
@@ -62,8 +62,13 @@ export function verifyLaunchParams(searchParams: string): VerifiedUser | null {
       .replace(/\//g, '_')
       .replace(/=+$/, '');
 
-    console.log('[vk-auth] hash matches sign:', hash === sign);
-    if (hash !== sign) return null;
+    const isValid = hash === sign;
+    console.log('[vk-auth] hash matches sign:', isValid);
+    
+    if (!isValid) {
+      console.log('[vk-auth] Signature mismatch. Expected:', sign, 'Calculated:', hash);
+      return null;
+    }
 
     const vkUserId = urlParams.get('vk_user_id');
     console.log('[vk-auth] vk_user_id present:', !!vkUserId);
