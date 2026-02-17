@@ -22,6 +22,7 @@ export interface FriendProfile {
   last_mined_at?: string;
   is_private?: boolean;
   is_blocked?: boolean;
+  points?: number;
 }
 
 export const FriendService = {

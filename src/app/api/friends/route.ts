@@ -25,14 +25,23 @@ export async function GET(req: NextRequest) {
 
     const { data: profiles } = await supabaseAdmin
       .from('profiles')
-      .select('*')
+      .select(`
+        *,
+        user_stats (
+          mined_balance
+        )
+      `)
       .in('vk_id', followingIds);
 
     if (!profiles) return NextResponse.json({ data: [] });
 
-    const result = profiles.map(profile => {
+    const result = profiles.map((profile: any) => {
       const followInfo = followData.find(f => f.following_id === profile.vk_id);
       const isBlockedByThem = followInfo?.is_blocked;
+      
+      // Handle potential array or object return for joined table
+      const stats = Array.isArray(profile.user_stats) ? profile.user_stats[0] : profile.user_stats;
+      const points = stats?.mined_balance || 0;
 
       if (profile.is_private || isBlockedByThem) {
         return {
@@ -40,6 +49,7 @@ export async function GET(req: NextRequest) {
           first_name: profile.first_name,
           last_name: profile.last_name,
           photo_200: profile.photo_200,
+          points,
           is_private: true,
           is_blocked_by_them: isBlockedByThem,
           // Sensitive data hidden
@@ -52,6 +62,7 @@ export async function GET(req: NextRequest) {
       }
       return {
         ...profile,
+        points,
         is_private: false,
         is_blocked_by_them: isBlockedByThem,
       };

@@ -1655,7 +1655,11 @@ export default function Home() {
 
                         <div className="flex-1 min-w-0">
                           <h4 className="font-black text-sm text-zinc-900 truncate">{formatName(friend.first_name, friend.last_name)}</h4>
-                          <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Нажмите для просмотра</p>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <Gem className="w-3 h-3 text-blue-500 fill-current" />
+                            <span className="text-xs font-black text-blue-600">{friend.points || 0}</span>
+                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider ml-1">Нажмите для просмотра</span>
+                          </div>
                         </div>
                         <button
                       onClick={(e) => handleUnfollow(e, friend.vk_id)}

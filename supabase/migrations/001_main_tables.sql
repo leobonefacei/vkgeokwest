@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS follows (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   follower_id BIGINT NOT NULL REFERENCES profiles(vk_id) ON DELETE CASCADE,
   following_id BIGINT NOT NULL REFERENCES profiles(vk_id) ON DELETE CASCADE,
+  is_blocked BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(follower_id, following_id)
 );
