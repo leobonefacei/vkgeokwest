@@ -29,6 +29,7 @@ export const FriendService = {
     try {
       await callAPI('/api/profiles', {
         action: 'upsert',
+        vk_id: profile.vk_id,
         first_name: profile.first_name,
         last_name: profile.last_name,
         photo_200: profile.photo_200,

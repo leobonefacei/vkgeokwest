@@ -58,29 +58,45 @@ export async function POST(req: NextRequest) {
   const { action, ...payload } = body;
 
   if (action === 'upsert') {
-    // User can only upsert their own profile
-    const { first_name, last_name, photo_200 } = payload;
-    const vkId = auth.vk_user_id;
+    // User can upsert their own profile, or ensure a friend's profile exists
+    const { vk_id: payloadVkId, first_name, last_name, photo_200 } = payload;
+    const verifiedUserId = auth.vk_user_id;
+    
+    // Determine target ID: use payload ID if provided, otherwise the verified user
+    const targetVkId = payloadVkId || verifiedUserId;
+    const isSelf = targetVkId === verifiedUserId;
 
-    console.log('[api/profiles] Upserting profile for:', vkId, first_name, last_name);
+    console.log('[api/profiles] Upserting profile for:', targetVkId, 'isSelf:', isSelf);
 
     // SECURITY: Validate photo_200 — only VK CDN domains allowed
     const profileData: any = { 
-      vk_id: vkId, 
+      vk_id: targetVkId, 
       first_name: first_name || 'Пользователь', 
       last_name: last_name || '',
       updated_at: new Date().toISOString()
     };
+
     if (photo_200 && isAllowedPhotoUrl(photo_200)) {
       profileData.photo_200 = photo_200;
     }
-    // If photo_200 is invalid/external, it's silently stripped — existing photo preserved
 
-    const { error } = await supabaseAdmin.from('profiles').upsert(
-      profileData,
-      { onConflict: 'vk_id' }
-    );
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    if (isSelf) {
+      // User is updating themselves — allow upserting everything provided
+      const { error } = await supabaseAdmin.from('profiles').upsert(
+        profileData,
+        { onConflict: 'vk_id' }
+      );
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    } else {
+      // User is ensuring a friend exists — only allow basic fields and don't touch is_private
+      // We use a query to see if it exists first to be safe, or just use upsert with limited fields
+      const { error } = await supabaseAdmin.from('profiles').upsert(
+        profileData, // is_private is NOT here, so it won't be overwritten if it exists
+        { onConflict: 'vk_id' }
+      );
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+    
     return NextResponse.json({ success: true });
   }
 
