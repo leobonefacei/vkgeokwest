@@ -1812,32 +1812,6 @@ export default function Home() {
 
                 <div className="space-y-4">
                   <button
-                  onClick={handleToggleNotifications}
-                  className="w-full flex items-center justify-between p-6 bg-white border border-zinc-100 rounded-[32px] hover:bg-zinc-50 transition-colors group">
-
-                    <div className="flex items-center gap-4">
-                      <div className={cn(
-                      "w-12 h-12 rounded-2xl flex items-center justify-center transition-colors",
-                      notificationsEnabled ? "bg-blue-50 text-blue-600" : "bg-zinc-100 text-zinc-400"
-                    )}>
-                        <Bell className="w-5 h-5" />
-                      </div>
-                      <div className="text-left">
-                        <h4 className="font-black text-sm">Уведомления</h4>
-                        <p className="text-[10px] font-bold text-zinc-400 uppercase mt-0.5">{notificationsEnabled ? 'Включены' : 'Выключены'}</p>
-                      </div>
-                    </div>
-                    <div className={cn(
-                    "w-12 h-6 rounded-full relative transition-colors",
-                    notificationsEnabled ? "bg-blue-600" : "bg-zinc-200"
-                  )}>
-                      <motion.div
-                      animate={{ x: notificationsEnabled ? 26 : 4 }}
-                      className="w-4 h-4 bg-white rounded-full absolute top-1" />
-                    </div>
-                  </button>
-
-                  <button
                   onClick={handleToggleGeo}
                   className="w-full flex items-center justify-between p-6 bg-white border border-zinc-100 rounded-[32px] hover:bg-zinc-50 transition-colors group">
 
