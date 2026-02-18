@@ -160,7 +160,7 @@ export default function Home() {
   const [selectedFriend, setSelectedFriend] = useState<FriendProfile | null>(null);
   const [selectedFriendStats, setSelectedFriendStats] = useState<{balance: number;history: any[];} | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<any | null>(null);
-  const [selectedLocationStats, setSelectedLocationStats] = useState<{totalVisits: number; recentVisitors: any[];} | null>(null);
+  const [selectedLocationStats, setSelectedLocationStats] = useState<{totalVisits: number; userHasVisited: boolean; recentVisitors: any[];} | null>(null);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
   const [mapTarget, setMapTarget] = useState<[number, number] | undefined>(undefined);
@@ -389,6 +389,7 @@ export default function Home() {
       if (data.place) {
         setSelectedLocationStats({
           totalVisits: data.totalVisits || 0,
+          userHasVisited: data.userHasVisited || false,
           recentVisitors: data.recentVisitors || []
         });
       }
@@ -2568,6 +2569,19 @@ export default function Home() {
                   <p className="text-zinc-400 text-xs font-bold mt-1 uppercase tracking-wider">{selectedLocation.category}</p>
                 </div>
               </div>
+
+              {/* Not visited banner */}
+              {selectedLocationStats && !selectedLocationStats.userHasVisited && (
+                <div className="bg-orange-50 border border-orange-200 rounded-2xl p-4 flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center">
+                    <MapPin className="w-5 h-5 text-orange-600" />
+                  </div>
+                  <div>
+                    <p className="font-black text-sm text-orange-800">Вы ещё здесь не были</p>
+                    <p className="text-orange-600 text-xs">Зачекиньтесь, чтобы получить баллы</p>
+                  </div>
+                </div>
+              )}
 
               {/* Stats */}
               {selectedLocationStats ? (
