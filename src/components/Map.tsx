@@ -293,19 +293,21 @@ export default function KnowledgeMap(props: MapProps) {
         marker.style.boxShadow = loc.isMined 
           ? '0 0 10px rgba(59, 130, 246, 0.5)' 
           : '0 4px 8px rgba(0, 0, 0, 0.1)';
-        const getCategoryIcon = (category: string) => {
-          switch (category) {
-            case 'Вуз': return '🎓';
-            case 'Библиотека': return '📚';
-            case 'Музей': return '🎨';
-            case 'Школа': return '🏫';
-            case 'Колледж': return '🏢';
-            case 'Памятник': return '🗿';
-            default: return '📍';
-          }
+        
+        const getCategoryIconSvg = (category: string): string => {
+          const size = 14;
+          const icons: Record<string, string> = {
+            'Вуз': `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c0 2 2 3 6 3s6-1 6-3v-5"/></svg>`,
+            'Школа': `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m4 6 8-4 8 4"/><path d="m18 10 4 2v8a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-8l4-2"/><path d="M14 22v-4a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v4"/><path d="M18 5v17"/><path d="M6 5v17"/><circle cx="12" cy="9" r="2"/></svg>`,
+            'Колледж': `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="16" height="20" x="4" y="2" rx="2" ry="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01"/><path d="M16 6h.01"/><path d="M12 6h.01"/><path d="M12 10h.01"/><path d="M12 14h.01"/><path d="M16 10h.01"/><path d="M16 14h.01"/><path d="M8 10h.01"/><path d="M8 14h.01"/></svg>`,
+            'Библиотека': `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/></svg>`,
+            'Музей': `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M8 22v-4h8v4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/><path d="M4 22v-4h4"/><path d="M16 6H8a2 2 0 0 0-2 2v4"/></svg>`,
+            'Памятник': `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 9V6a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v3"/><path d="M3 11v5a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-5a2 2 0 0 0-4 0v2H7v-2a2 2 0 0 0-4 0Z"/><path d="M3 21v-1a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v1"/><path d="M12 6v4"/><path d="M12 14v4"/></svg>`,
+          };
+          return icons[category] || `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>`;
         };
 
-        marker.innerText = getCategoryIcon(loc.category);
+        marker.innerHTML = getCategoryIconSvg(loc.category);
         
         el.appendChild(marker);
 
