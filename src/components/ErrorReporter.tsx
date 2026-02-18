@@ -196,7 +196,7 @@ export default function ErrorReporter({ error, reset }: ReporterProps) {
 
             {webglError && (
               <a
-                href="https://get.webgl.org/webgl2/"
+                href="https://vk.com/away.php?to=https://get.webgl.org/webgl2/"
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
