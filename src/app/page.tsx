@@ -160,7 +160,6 @@ export default function Home() {
   const [following, setFollowing] = useState<FriendProfile[]>([]);
   const [followers, setFollowers] = useState<FriendProfile[]>([]);
   const [isRefreshingFriends, setIsRefreshingFriends] = useState(false);
-  const [confirmUnfollowId, setConfirmUnfollowId] = useState<number | null>(null);
   const [selectedFriend, setSelectedFriend] = useState<FriendProfile | null>(null);
   const [selectedFriendStats, setSelectedFriendStats] = useState<{balance: number;history: any[];isPrivate?: boolean;} | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<any | null>(null);
@@ -340,17 +339,6 @@ export default function Home() {
   const handleUnfollow = async (e: React.MouseEvent, friendId: number) => {
     e.stopPropagation();
     if (!user) return;
-    
-    // If not confirmed yet, show confirmation
-    if (confirmUnfollowId !== friendId) {
-      setConfirmUnfollowId(friendId);
-      // Auto-reset after 3 seconds
-      setTimeout(() => setConfirmUnfollowId(null), 3000);
-      return;
-    }
-    
-    // Confirmed - proceed with unfollow
-    setConfirmUnfollowId(null);
     await FriendService.unfollow(user.id, friendId);
     await refreshFriends();
     setMessage('Пользователь удален из списка');
@@ -1757,18 +1745,9 @@ export default function Home() {
                             </div>
                             <button
                           onClick={(e) => handleUnfollow(e, friend.vk_id)}
-                          className={cn(
-                            "w-10 h-10 rounded-xl flex items-center justify-center active:scale-90 transition-all",
-                            confirmUnfollowId === friend.vk_id 
-                              ? "bg-red-500 text-white" 
-                              : "bg-zinc-50 text-zinc-400 hover:bg-red-50 hover:text-red-500"
-                          )}>
+                          className="w-10 h-10 bg-zinc-50 rounded-xl flex items-center justify-center text-zinc-400 active:scale-90 transition-all hover:bg-red-50 hover:text-red-500">
 
-                              {confirmUnfollowId === friend.vk_id ? (
-                                <CheckCircle2 className="w-4 h-4" />
-                              ) : (
-                                <UserMinus className="w-4 h-4" />
-                              )}
+                              <UserMinus className="w-4 h-4" />
                             </button>
                           </>
                         )}
