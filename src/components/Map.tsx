@@ -147,6 +147,27 @@ export default function KnowledgeMap(props: MapProps) {
               'fill-outline-color': '#4A90E2'
             }
           });
+
+          // Set disputed borders to show Russian perspective
+          const showDisputedBorders = (countryCode: string) => {
+            const claimed_by_countries = ["RU", "UA", "XN", "AM", "XK", "IN", "PK", "CN", "NP", "BT", "TR", "SY", "PS", "IL", "SY", "ET", "EH", "SD", "SS", "KE"];
+            if (!claimed_by_countries.includes(countryCode)) return;
+            
+            if (map.current?.getLayer("boundary_2_z5_disputed")) {
+              const boundary_disputed = map.current.getLayer("boundary_2_z5_disputed");
+              if (boundary_disputed && boundary_disputed.filter) {
+                map.current.setFilter("boundary_2_z5_disputed", [...(boundary_disputed.filter as any[]), ["==", "claimed_by", countryCode]]);
+              }
+            }
+            if (map.current?.getLayer("boundary_2_z5_disputed_maritime")) {
+              const boundary_disputed_maritime = map.current.getLayer("boundary_2_z5_disputed_maritime");
+              if (boundary_disputed_maritime && boundary_disputed_maritime.filter) {
+                map.current.setFilter("boundary_2_z5_disputed_maritime", [...(boundary_disputed_maritime.filter as any[]), ["==", "claimed_by", countryCode]]);
+              }
+            }
+          };
+          
+          showDisputedBorders('RU');
         }
       });
 
