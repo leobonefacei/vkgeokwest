@@ -357,14 +357,10 @@ export default function Home() {
 
   const handleFriendClick = async (friend: FriendProfile) => {
     setSelectedFriend(friend);
-    // Fetch additional info from our service
     try {
-      const [uStats, history] = await Promise.all([
-      UmnicoinService.getOtherUserStats(friend.vk_id),
-      FriendService.getFriendHistory(friend.vk_id)]
-      );
+      const history = await FriendService.getFriendHistory(friend.vk_id);
       setSelectedFriendStats({
-        balance: uStats?.balance || 0,
+        balance: friend.points || 0,
         history: history || []
       });
     } catch (err) {
