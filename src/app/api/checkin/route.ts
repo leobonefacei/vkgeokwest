@@ -328,21 +328,24 @@ export async function POST(req: NextRequest) {
     success: true,
     message: `Вы посетили "${targetPlace.name}"`,
     coins: coinsEarned,
-    balance: newMinedBalance,
+    balance: newBalance,
     visit: {
       locationId: targetPlace.id,
       locationName: targetPlace.name,
       category: targetPlace.category,
-      timestamp: Date.now(),
+      timestamp: nowIso,
       coinsEarned,
       lat: targetPlace.lat,
       lon: targetPlace.lon,
     },
     stats: {
+      balance: newBalance,
+      minedBalance: newMinedBalance,
       visitsToday: newVisitsToday,
       visitsThisWeek: newVisitsThisWeek,
       weeklyDays: newWeeklyDays,
       categoryCooldowns: updatedCooldowns,
+      lastCheckIn: nowIso,
     },
   });
 }

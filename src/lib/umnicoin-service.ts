@@ -201,6 +201,7 @@ export const UmnicoinService = {
           stats.history = result.visits.map((dv: any) => ({
             id: dv.id,
             locationId: dv.place_id,
+            osmId: dv.osm_id,
             locationName: dv.location_name || 'Неизвестное место',
             category: dv.category || 'Образование',
             timestamp: new Date(dv.timestamp).getTime(),
@@ -210,6 +211,7 @@ export const UmnicoinService = {
           }));
         }
         
+        console.log('[UmnicoinService] Synced history count:', stats.history.length);
         this.saveUserData(stats);
       }
     } catch (err) {
@@ -257,10 +259,20 @@ export const UmnicoinService = {
     });
 
     return combined.map(loc => {
-      const visit = stats.history.find(h => 
-        h.locationId === loc.id || 
-        (h.lat && h.lon && Math.abs(h.lat - loc.lat) < 0.0001 && Math.abs(h.lon - loc.lon) < 0.0001)
-      );
+      // Try to find a visit to this location in history
+      const visit = stats.history.find(h => {
+        // Match by internal UUID
+        if (h.locationId === loc.id) return true;
+        // Match by OSM ID
+        if (loc.osmId && h.osmId === loc.osmId) return true;
+        // Match by proximity (very close coordinates)
+        if (h.lat && h.lon && loc.lat && loc.lon) {
+          const dist = this.calculateDistance(h.lat, h.lon, loc.lat, loc.lon);
+          return dist < 50; // Within 50 meters is definitely the same place
+        }
+        return false;
+      });
+
       if (visit) {
         return { ...loc, isMined: true, minedAt: visit.timestamp };
       }
@@ -308,18 +320,28 @@ export const UmnicoinService = {
       const result = await callAPI('/api/checkin', { lat, lon, category, osm_id });
       
       if (result.success && result.visit) {
-        // Update local cache
         const stats = this.getUserData();
-        stats.balance = result.balance || stats.balance;
+        
+        // Update stats from server response
+        stats.balance = result.stats?.balance ?? result.balance ?? stats.balance;
         stats.visitsToday = result.stats?.visitsToday ?? stats.visitsToday;
         stats.visitsThisWeek = result.stats?.visitsThisWeek ?? stats.visitsThisWeek;
         stats.weeklyDays = result.stats?.weeklyDays ?? stats.weeklyDays;
         stats.categoryCooldowns = result.stats?.categoryCooldowns ?? stats.categoryCooldowns;
-        stats.lastCheckIn = Date.now();
-        stats.history.unshift({
+        stats.lastCheckIn = result.stats?.lastCheckIn ? new Date(result.stats.lastCheckIn).getTime() : Date.now();
+        
+        // Add visit to history
+        const newVisit = {
           id: Math.random().toString(36).substr(2, 9),
           ...result.visit,
-        });
+          timestamp: new Date(result.visit.timestamp).getTime()
+        };
+        
+        // Avoid duplicate history entries
+        if (!stats.history.some(h => h.timestamp === newVisit.timestamp)) {
+          stats.history.unshift(newVisit);
+        }
+        
         this.saveUserData(stats);
 
         // Update friend last mined

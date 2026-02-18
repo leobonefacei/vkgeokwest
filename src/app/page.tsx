@@ -274,10 +274,13 @@ export default function Home() {
   const refreshData = async () => {
     if (!user) return;
     try {
+      console.log('[Home] Refreshing data...');
       await UmnicoinService.syncUserVisits(user.id);
       const updatedStats = UmnicoinService.getUserData();
+      console.log('[Home] Data synced, history entries:', updatedStats.history.length);
       setStats(updatedStats);
-      setLocations(UmnicoinService.getAllLocations());
+      const updatedLocations = UmnicoinService.getAllLocations();
+      setLocations(updatedLocations);
     } catch (err) {
       console.error('Failed to refresh data:', err);
     }
