@@ -73,7 +73,10 @@ CREATE TABLE IF NOT EXISTS knowledge_places (
 -- Права доступа пользователей
 CREATE TABLE IF NOT EXISTS users_permissions (
   vk_id BIGINT PRIMARY KEY REFERENCES profiles(vk_id) ON DELETE CASCADE,
+  geo_permission_granted BOOLEAN DEFAULT false,
+  notifications_enabled BOOLEAN DEFAULT false,
   permissions JSONB DEFAULT '{}',
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

@@ -217,35 +217,48 @@ export default function Home() {
         setMessage('Уведомления отключены');
         setMessageType('info');
       } else {
-        console.log('Запрос разрешения на уведомления...');
+        console.log('[Home] Requesting notifications permission...');
         const data = await bridge.send('VKWebAppAllowNotifications');
-        console.log('Ответ VK Bridge:', data);
+        console.log('[Home] VK Bridge Response:', data);
 
-        if (data && (data.result === true || (data as any).status === 'success' || (data as any).result === 'ok')) {
+        // VK returns { result: true } or { status: 'success' }
+        if (data && (data.result === true || (data as any).status === 'success')) {
           setNotificationsEnabled(true);
-          await PermissionService.setNotificationPermission(user.id, true);
+          // Don't await this to keep UI snappy
+          PermissionService.setNotificationPermission(user.id, true).catch(err => {
+            console.error('[Home] Failed to save permission to DB:', err);
+          });
           setMessage('Уведомления включены');
           setMessageType('info');
         } else {
-          // Если ответ не содержит явного успеха, не меняем состояние
-          setNotificationsEnabled(false);
+          console.warn('[Home] Unexpected response from VK Bridge:', data);
+          // If user clicked allow but we didn't get success, try to set true anyway if result is not false
+          if (data && (data as any).result !== false) {
+             setNotificationsEnabled(true);
+             PermissionService.setNotificationPermission(user.id, true).catch(() => {});
+          } else {
+             setNotificationsEnabled(false);
+          }
         }
       }
     } catch (err: any) {
-      console.error('Failed to toggle notifications:', err);
-      // Ошибка 1: уведомления уже разрешены
-      if (err.error_data?.error_code === 1) {
+      console.error('[Home] Failed to toggle notifications:', err);
+      
+      // Error code 1 usually means already allowed or system success
+      if (err.error_data?.error_code === 1 || err.error_type === 'client_error' && err.error_data?.error_reason?.includes('already allowed')) {
         setNotificationsEnabled(true);
-        await PermissionService.setNotificationPermission(user.id, true);
+        PermissionService.setNotificationPermission(user.id, true).catch(() => {});
         setMessage('Уведомления активны');
         setMessageType('info');
-      } else {
-        // В случае отказа пользователя или другой ошибки - выключаем
+      } else if (err.error_data?.error_code === 4 || err.error_data?.error_reason === 'User denied') {
+        // User denied permission
         setNotificationsEnabled(false);
-        if (err.error_data?.error_code === 4 || err.error_type === 'client_error') {
-          setMessage('Доступ отклонен');
-          setMessageType('error');
-        }
+        setMessage('Доступ к уведомлениям отклонен');
+        setMessageType('error');
+      } else {
+        // Other error
+        setMessage('Не удалось включить уведомления');
+        setMessageType('error');
       }
     }
     setTimeout(() => setMessage(null), 3000);

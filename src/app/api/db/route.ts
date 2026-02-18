@@ -57,15 +57,14 @@ const BLOCKED_SESSION_FIELDS = new Set([
 // SECURITY: Allowed domains for photo_200 field (VK CDN only)
 const ALLOWED_PHOTO_HOSTS = [
   'vk.com',
-  'sun1-',   // sun1-XX.userapi.com pattern
-  'sun2-',
-  'sun6-',
+  'userapi.com',
+  'vk-cdn.net',
+  'vkontakte.ru',
+  'vk.me',
+  'pp.vk.me',
+  'vkmessenger.com',
+  'sun1-',
   'sun9-',
-  '.userapi.com',
-  '.vk-cdn.net',
-  '.vk.com',
-  '.vkontakte.ru',
-  '.vk.me',
 ];
 
 function isAllowedPhotoUrl(url: string): boolean {
@@ -74,8 +73,9 @@ function isAllowedPhotoUrl(url: string): boolean {
     const parsed = new URL(url);
     if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return false;
     const host = parsed.hostname.toLowerCase();
+    
     return ALLOWED_PHOTO_HOSTS.some(allowed =>
-      host === allowed || host.endsWith(allowed)
+      host === allowed || host.endsWith('.' + allowed) || host.startsWith(allowed)
     );
   } catch {
     return false;
