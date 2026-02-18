@@ -100,7 +100,8 @@ class QueryBuilder {
           if (this._table === 'user_stats') {
             const statsData = result.stats ? [{
               user_id: result.profile?.vk_id,
-              mined_balance: result.stats.balance,
+              balance: result.stats.balance,
+              mined_balance: result.stats.minedBalance,
               visits_today: result.stats.visitsToday,
               visits_this_week: result.stats.visitsThisWeek,
               weekly_days: result.stats.weeklyDays,

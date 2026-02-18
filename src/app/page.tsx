@@ -364,7 +364,7 @@ export default function Home() {
       FriendService.getFriendHistory(friend.vk_id)]
       );
       setSelectedFriendStats({
-        balance: uStats?.mined_balance || 0,
+        balance: uStats?.balance || 0,
         history: history || []
       });
     } catch (err) {

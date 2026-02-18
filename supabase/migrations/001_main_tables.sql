@@ -82,6 +82,35 @@ CREATE TABLE IF NOT EXISTS follows (
   UNIQUE(follower_id, following_id)
 );
 
+-- Лог аудита
+CREATE TABLE IF NOT EXISTS audit_log (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  vk_id BIGINT NOT NULL,
+  action TEXT NOT NULL,
+  details JSONB DEFAULT '{}',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Правила спавна зомби
+CREATE TABLE IF NOT EXISTS zombie_spawn_rules (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  preset_id UUID NOT NULL REFERENCES zombie_scenario_presets(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  trigger_type TEXT NOT NULL,
+  turn_min INTEGER DEFAULT 0,
+  turn_max INTEGER DEFAULT 0,
+  zombie_count INTEGER DEFAULT 1,
+  distance_min INTEGER DEFAULT 50,
+  distance_max INTEGER DEFAULT 150,
+  speed INTEGER DEFAULT 100,
+  chance INTEGER DEFAULT 100,
+  sort_order INTEGER DEFAULT 0,
+  use_player_avatars BOOLEAN DEFAULT false,
+  avatar_chance INTEGER DEFAULT 50,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Таблицы для зомби-режима (из существующей миграции)
 -- Игровые сессии
 CREATE TABLE IF NOT EXISTS zombie_game_sessions (

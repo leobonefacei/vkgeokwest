@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
       .select(`
         *,
         user_stats (
-          mined_balance
+          balance
         )
       `)
       .in('vk_id', followingIds);
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
       
       // Handle potential array or object return for joined table
       const stats = Array.isArray(profile.user_stats) ? profile.user_stats[0] : profile.user_stats;
-      const points = stats?.mined_balance || 0;
+      const points = stats?.balance || 0;
 
       if (profile.is_private || isBlockedByThem) {
         return {
