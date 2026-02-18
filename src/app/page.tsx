@@ -1858,15 +1858,8 @@ export default function Home() {
                       <span className="text-6xl font-black tracking-tight">{stats.balance}</span>
                       <Gem className="w-10 h-10 mb-2 fill-white/80" />
                     </div>
-                    <div className="flex items-center gap-4 text-xs font-bold">
-                      <div className="bg-white/10 backdrop-blur-xl px-4 py-2 rounded-2xl">
-                        <span className="text-white/60">Добыто:</span>
-                        <span className="ml-2 text-white">{stats.minedBalance}</span>
-                      </div>
-                      <div className="bg-white/10 backdrop-blur-xl px-4 py-2 rounded-2xl">
-                        <span className="text-white/60">Получено:</span>
-                        <span className="ml-2 text-white">{stats.giftedBalance}</span>
-                      </div>
+                    <div className="text-xs font-medium text-white/70 leading-relaxed bg-white/10 backdrop-blur-xl rounded-2xl p-4">
+                      Геотокены — баллы, которые вы получаете за посещение школ, вузов, библиотек, музеев и других мест знаний
                     </div>
                   </div>
                 </div>
