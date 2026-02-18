@@ -49,7 +49,7 @@ import {
   Pyramid } from
 'lucide-react';
 import bridge from '@vkontakte/vk-bridge';
-import { useVKBridge } from '@/lib/vk-context';
+import { useVKBridge, getRawLaunchParams } from '@/lib/vk-context';
 import { UmnicoinService, UserStats, Location } from '@/lib/umnicoin-service';
 import { FriendService, FriendProfile } from '@/lib/friend-service';
 import { PermissionService } from '@/lib/permission-service';
@@ -159,6 +159,9 @@ export default function Home() {
   const [isRefreshingFriends, setIsRefreshingFriends] = useState(false);
   const [selectedFriend, setSelectedFriend] = useState<FriendProfile | null>(null);
   const [selectedFriendStats, setSelectedFriendStats] = useState<{balance: number;history: any[];} | null>(null);
+  const [selectedLocation, setSelectedLocation] = useState<any | null>(null);
+  const [selectedLocationStats, setSelectedLocationStats] = useState<{totalVisits: number; recentVisitors: any[];} | null>(null);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
   const [isPrivate, setIsPrivate] = useState(false);
   const [mapTarget, setMapTarget] = useState<[number, number] | undefined>(undefined);
   const [ranking, setRanking] = useState<{id: number;name: string;points: number;avatar?: string;isMe?: boolean;}[]>([]);
@@ -368,6 +371,31 @@ export default function Home() {
       });
     } catch (err) {
       console.error('Failed to fetch friend details:', err);
+    }
+  };
+
+  const handleLocationClick = async (location: any) => {
+    setSelectedLocation(location);
+    setSelectedLocationStats(null);
+    setIsLoadingLocation(true);
+    try {
+      const headers: Record<string, string> = {};
+      const lp = getRawLaunchParams();
+      if (lp) headers['X-Launch-Params'] = lp;
+      
+      const res = await fetch(`/api/place/${location.id}`, { headers });
+      const data = await res.json();
+      
+      if (data.place) {
+        setSelectedLocationStats({
+          totalVisits: data.totalVisits || 0,
+          recentVisitors: data.recentVisitors || []
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch location details:', err);
+    } finally {
+      setIsLoadingLocation(false);
     }
   };
 
@@ -1003,6 +1031,7 @@ export default function Home() {
                 friends={following}
                 offsetY={isExpanded ? 50 : 0}
                 onFriendClick={handleFriendClick}
+                onLocationClick={handleLocationClick}
                 centerOn={mapTarget}
                 pulse={mapPulse} />
 
@@ -2470,6 +2499,122 @@ export default function Home() {
             </motion.div>
           </div>
         }
+
+        {/* Location Detail Modal - Bottom Sheet Style */}
+        {selectedLocation && (
+        <motion.div 
+          initial={{ opacity: 0, y: '100%' }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: '100%' }}
+          transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+          className="fixed inset-0 z-[160] flex items-end justify-center pointer-events-none">
+          
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => {
+              setSelectedLocation(null);
+              setSelectedLocationStats(null);
+            }}
+            className="absolute inset-0 bg-zinc-900/60 backdrop-blur-md pointer-events-auto" />
+
+          <motion.div 
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            drag="y"
+            dragConstraints={{ top: 0, bottom: 0 }}
+            dragElastic={{ top: 0.1, bottom: 0.5 }}
+            onDragEnd={(e, info) => {
+              if (info.offset.y > 150 || info.velocity.y > 500) {
+                setSelectedLocation(null);
+                setSelectedLocationStats(null);
+              }
+            }}
+            className="relative w-full bg-white rounded-t-[48px] p-8 max-h-[85vh] overflow-y-auto pointer-events-auto">
+
+            <div className="w-12 h-1.5 bg-zinc-200 rounded-full mx-auto mb-8 cursor-grab active:cursor-grabbing" />
+
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-2xl font-black">О месте</h2>
+              <button
+              onClick={() => {
+                setSelectedLocation(null);
+                setSelectedLocationStats(null);
+              }}
+              className="w-12 h-12 rounded-2xl bg-zinc-50 flex items-center justify-center active:scale-90 transition-all">
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            <div className="space-y-6">
+              {/* Place Info */}
+              <div className="flex items-center gap-4 p-5 bg-zinc-50 rounded-[32px]">
+                <div className={cn(
+                  "w-14 h-14 rounded-2xl flex items-center justify-center",
+                  selectedLocation.category === 'Вуз' || selectedLocation.category === 'Школа' || selectedLocation.category === 'Колледж' ? "bg-blue-50 text-blue-600" :
+                  selectedLocation.category === 'Библиотека' ? "bg-violet-50 text-violet-600" :
+                  selectedLocation.category === 'Музей' ? "bg-pink-50 text-pink-600" :
+                  "bg-orange-50 text-orange-600"
+                )}>
+                  {selectedLocation.category === 'Вуз' || selectedLocation.category === 'Школа' || selectedLocation.category === 'Колледж' ? <GraduationCap className="w-7 h-7" /> :
+                   selectedLocation.category === 'Библиотека' ? <BookA className="w-7 h-7" /> :
+                   selectedLocation.category === 'Музей' ? <Landmark className="w-7 h-7" /> :
+                   <Pyramid className="w-7 h-7" />}
+                </div>
+                <div>
+                  <h4 className="font-black text-lg leading-tight">{selectedLocation.name}</h4>
+                  <p className="text-zinc-400 text-xs font-bold mt-1 uppercase tracking-wider">{selectedLocation.category}</p>
+                </div>
+              </div>
+
+              {/* Stats */}
+              {selectedLocationStats ? (
+                <>
+                  <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-[24px] p-5 text-white text-center">
+                    <div className="flex items-center justify-center gap-2 mb-1">
+                      <Users className="w-6 h-6" />
+                      <span className="text-3xl font-black">{selectedLocationStats.totalVisits}</span>
+                    </div>
+                    <p className="text-white/60 text-xs font-bold uppercase tracking-wider">Всего посещений</p>
+                  </div>
+
+                  {/* Recent Visitors */}
+                  <div>
+                    <h4 className="font-black text-sm text-zinc-900 mb-3">Последние посетители</h4>
+                    <div className="space-y-2">
+                      {selectedLocationStats.recentVisitors.length > 0 ? 
+                        selectedLocationStats.recentVisitors.map((visitor: any, idx: number) => (
+                          <div key={idx} className="flex items-center gap-3 p-3 bg-zinc-50 rounded-xl">
+                            <img
+                              src={visitor.photo_200 || AVATAR_PLACEHOLDER}
+                              alt={visitor.first_name}
+                              className="w-10 h-10 rounded-xl object-cover" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-bold text-zinc-900 truncate">
+                                {visitor.first_name} {visitor.last_name}
+                              </p>
+                              <p className="text-[10px] text-zinc-400">
+                                {new Date(visitor.visited_at).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}
+                              </p>
+                            </div>
+                          </div>
+                        )) :
+                        <p className="text-center text-zinc-400 text-sm py-4">Нет посетителей</p>
+                      }
+                    </div>
+                  </div>
+                </>
+              ) : isLoadingLocation ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="w-8 h-8 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                </div>
+              ) : null}
+            </div>
+          </motion.div>
+        </motion.div>
+        )}
 
         {/* Admin Balance Editor Modal */}
         {editingUser &&

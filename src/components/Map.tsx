@@ -11,6 +11,7 @@ interface MapProps {
   friends?: FriendProfile[];
   onPosChange?: (pos: [number, number]) => void;
   onFriendClick?: (friend: FriendProfile) => void;
+  onLocationClick?: (location: any) => void;
   offsetY?: number;
   centerOn?: [number, number];
   pulse?: boolean;
@@ -63,7 +64,7 @@ function WebGLFallback() {
 }
 
 export default function KnowledgeMap(props: MapProps) {
-    const { userPos, locations, friends = [], offsetY = 0, onFriendClick, centerOn, pulse } = props || {};
+    const { userPos, locations, friends = [], offsetY = 0, onFriendClick, onLocationClick, centerOn, pulse } = props || {};
     const mapContainer = useRef<HTMLDivElement>(null);
   const map = useRef<any>(null);
   const userMarker = useRef<any>(null);
@@ -310,6 +311,13 @@ export default function KnowledgeMap(props: MapProps) {
         marker.innerHTML = getCategoryIconSvg(loc.category);
         
         el.appendChild(marker);
+
+        // Add click handler for location details
+        el.addEventListener('click', (e) => {
+          e.stopPropagation();
+          if (onLocationClick) onLocationClick(loc);
+        });
+        el.style.cursor = 'pointer';
 
         if (loc.isMined && loc.minedAt) {
           const date = new Date(loc.minedAt);
