@@ -160,6 +160,7 @@ export default function Home() {
   const [following, setFollowing] = useState<FriendProfile[]>([]);
   const [followers, setFollowers] = useState<FriendProfile[]>([]);
   const [isRefreshingFriends, setIsRefreshingFriends] = useState(false);
+  const [confirmUnfollowId, setConfirmUnfollowId] = useState<number | null>(null);
   const [selectedFriend, setSelectedFriend] = useState<FriendProfile | null>(null);
   const [selectedFriendStats, setSelectedFriendStats] = useState<{balance: number;history: any[];isPrivate?: boolean;} | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<any | null>(null);
@@ -339,6 +340,17 @@ export default function Home() {
   const handleUnfollow = async (e: React.MouseEvent, friendId: number) => {
     e.stopPropagation();
     if (!user) return;
+    
+    // If not confirmed yet, show confirmation
+    if (confirmUnfollowId !== friendId) {
+      setConfirmUnfollowId(friendId);
+      // Auto-reset after 3 seconds
+      setTimeout(() => setConfirmUnfollowId(null), 3000);
+      return;
+    }
+    
+    // Confirmed - proceed with unfollow
+    setConfirmUnfollowId(null);
     await FriendService.unfollow(user.id, friendId);
     await refreshFriends();
     setMessage('Пользователь удален из списка');
@@ -425,20 +437,40 @@ export default function Home() {
     if (!user) return;
     try {
       const data = await bridge.send('VKWebAppGetFriends', { multi: true });
-      if (data && data.users) {
-        for (const friend of data.users) {
-          // 1. Ensure friend has a profile in our DB first (required for FK constraint)
-          await FriendService.ensureProfile({
-            vk_id: friend.id,
-            first_name: friend.first_name,
-            last_name: friend.last_name,
-            photo_200: friend.photo_200,
-            photo_100: friend.photo_100
-          });
-          // 2. Follow in DB
-          await FriendService.followFriend(user.id, friend.id);
-        }
-        await refreshFriends();
+      if (data && data.users && data.users.length > 0) {
+        // Create skeleton friends - show immediately as loading
+        const skeletonFriends: FriendProfile[] = data.users.map((friend: any) => ({
+          vk_id: friend.id,
+          first_name: friend.first_name,
+          last_name: friend.last_name,
+          photo_200: friend.photo_200,
+          is_loading: true,
+          points: 0,
+          is_private: false
+        }));
+        
+        // Add skeletons to list immediately
+        setFollowing(prev => [...prev, ...skeletonFriends]);
+        
+        // Save in background
+        (async () => {
+          try {
+            for (const friend of data.users) {
+              await FriendService.ensureProfile({
+                vk_id: friend.id,
+                first_name: friend.first_name,
+                last_name: friend.last_name,
+                photo_200: friend.photo_200,
+                photo_100: friend.photo_100
+              });
+              await FriendService.followFriend(user.id, friend.id);
+            }
+            await refreshFriends();
+          } catch (err) {
+            console.error('Failed to save friends:', err);
+          }
+        })();
+        
         setMessage(`Добавлено друзей: ${data.users.length}`);
         setMessageType('info');
         setTimeout(() => setMessage(null), 3000);
@@ -1685,37 +1717,61 @@ export default function Home() {
                     {following.length > 0 ? following.map((friend, idx) =>
                   <div
                     key={friend.vk_id || `f-${idx}`}
-                    onClick={() => handleFriendClick(friend)}
-                    className="bg-white p-4 rounded-[28px] border border-zinc-100 flex items-center gap-4 shadow-sm active:scale-[0.98] transition-all cursor-pointer">
+                    onClick={() => !friend.is_loading && handleFriendClick(friend)}
+                    className={cn(
+                      "bg-white p-4 rounded-[28px] border border-zinc-100 flex items-center gap-4 shadow-sm transition-all cursor-pointer",
+                      friend.is_loading ? "opacity-70" : "active:scale-[0.98]"
+                    )}>
 
-                        <img
-                      src={friend.photo_200 || AVATAR_PLACEHOLDER}
-                      alt={friend.first_name}
-                      className="w-12 h-12 rounded-2xl object-cover bg-zinc-100" />
+                        {friend.is_loading ? (
+                          <>
+                            <div className="w-12 h-12 rounded-2xl bg-zinc-200 animate-pulse" />
+                            <div className="flex-1 min-w-0 space-y-2">
+                              <div className="h-4 w-24 bg-zinc-200 rounded animate-pulse" />
+                              <div className="h-3 w-32 bg-zinc-200 rounded animate-pulse" />
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <img
+                          src={friend.photo_200 || AVATAR_PLACEHOLDER}
+                          alt={friend.first_name}
+                          className="w-12 h-12 rounded-2xl object-cover bg-zinc-100" />
 
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-black text-sm text-zinc-900 truncate flex items-center gap-2">
-                            {formatName(friend.first_name, friend.last_name)}
-                            {friend.is_private && <Lock className="w-3 h-3 text-zinc-400" />}
-                          </h4>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            {friend.is_private ? (
-                              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Приватный</span>
-                            ) : (
-                              <>
-                                <Gem className="w-3 h-3 text-blue-500 fill-current" />
-                                <span className="text-xs font-black text-blue-600">{friend.points || 0}</span>
-                                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider ml-1">Нажмите для просмотра</span>
-                              </>
-                            )}
-                          </div>
-                        </div>
-                        <button
-                      onClick={(e) => handleUnfollow(e, friend.vk_id)}
-                      className="w-10 h-10 bg-zinc-50 rounded-xl flex items-center justify-center text-zinc-400 active:scale-90 transition-all hover:bg-red-50 hover:text-red-500">
+                            <div className="flex-1 min-w-0">
+                              <h4 className="font-black text-sm text-zinc-900 truncate flex items-center gap-2">
+                                {formatName(friend.first_name, friend.last_name)}
+                                {friend.is_private && <Lock className="w-3 h-3 text-zinc-400" />}
+                              </h4>
+                              <div className="flex items-center gap-2 mt-0.5">
+                                {friend.is_private ? (
+                                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Приватный</span>
+                                ) : (
+                                  <>
+                                    <Gem className="w-3 h-3 text-blue-500 fill-current" />
+                                    <span className="text-xs font-black text-blue-600">{friend.points || 0}</span>
+                                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider ml-1">Нажмите для просмотра</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                            <button
+                          onClick={(e) => handleUnfollow(e, friend.vk_id)}
+                          className={cn(
+                            "w-10 h-10 rounded-xl flex items-center justify-center active:scale-90 transition-all",
+                            confirmUnfollowId === friend.vk_id 
+                              ? "bg-red-500 text-white" 
+                              : "bg-zinc-50 text-zinc-400 hover:bg-red-50 hover:text-red-500"
+                          )}>
 
-                          <UserMinus className="w-4 h-4" />
-                        </button>
+                              {confirmUnfollowId === friend.vk_id ? (
+                                <CheckCircle2 className="w-4 h-4" />
+                              ) : (
+                                <UserMinus className="w-4 h-4" />
+                              )}
+                            </button>
+                          </>
+                        )}
                       </div>
                   ) :
                   <div className="text-center py-10 bg-zinc-50 rounded-[32px] border border-dashed border-zinc-200">

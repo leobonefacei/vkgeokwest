@@ -24,6 +24,7 @@ export interface FriendProfile {
   last_mined_at?: string;
   is_private?: boolean;
   is_blocked?: boolean;
+  is_loading?: boolean;
   points?: number;
 }
 
