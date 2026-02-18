@@ -2475,7 +2475,7 @@ export default function Home() {
               </div>
               <h3 className="text-2xl font-black mb-3">Прекратить отслеживание?</h3>
               <p className="text-zinc-500 text-sm leading-relaxed mb-6">
-                Вы уверены, что хотите перестать отслеживать {pendingUnfollowFriend.first_name}? Вы больше не будете видеть его посещения на карте.
+                Вы уверены, что хотите перестать отслеживать этого пользователя? Вы больше не будете видеть его посещения на карте.
               </p>
 
               <div className="flex gap-3">
