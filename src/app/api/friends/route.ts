@@ -111,6 +111,16 @@ export async function GET(req: NextRequest) {
 
     if (profile?.is_private) return NextResponse.json({ data: [], is_private: true });
 
+    // Check if user has blocked us
+    const { data: followData } = await supabaseAdmin
+      .from('follows')
+      .select('is_blocked')
+      .eq('follower_id', Number(targetVkId))
+      .eq('following_id', vkId)
+      .single();
+
+    if (followData?.is_blocked) return NextResponse.json({ data: [], is_private: true });
+
     const { data, error } = await supabaseAdmin
       .from('user_visits')
       .select('*')
