@@ -43,7 +43,10 @@ import {
   Timer,
   BookOpen,
   Search,
-  Radar } from
+  Radar,
+  BookA,
+  Landmark,
+  Pyramid } from
 'lucide-react';
 import bridge from '@vkontakte/vk-bridge';
 import { useVKBridge } from '@/lib/vk-context';
@@ -91,7 +94,7 @@ const KNOWLEDGE_CATEGORIES = [
   id: 'Образовательные учреждения',
   name: 'Образование',
   desc: 'Школы, вузы, колледжи',
-  icon: <School className="w-6 h-6" />,
+  icon: <GraduationCap className="w-6 h-6" />,
   reward: 5,
   gradient: 'from-blue-500 to-indigo-600',
   bg: 'bg-blue-50'
@@ -100,7 +103,7 @@ const KNOWLEDGE_CATEGORIES = [
   id: 'Библиотека',
   name: 'Библиотеки',
   desc: 'Центры знаний и книг',
-  icon: <Library className="w-6 h-6" />,
+  icon: <BookA className="w-6 h-6" />,
   reward: 5,
   gradient: 'from-violet-500 to-purple-600',
   bg: 'bg-violet-50'
@@ -109,7 +112,7 @@ const KNOWLEDGE_CATEGORIES = [
   id: 'Музей',
   name: 'Музеи',
   desc: 'История и культура',
-  icon: <Palette className="w-6 h-6" />,
+  icon: <Landmark className="w-6 h-6" />,
   reward: 5,
   gradient: 'from-pink-500 to-rose-600',
   bg: 'bg-pink-50'
@@ -118,7 +121,7 @@ const KNOWLEDGE_CATEGORIES = [
   id: 'Памятник',
   name: 'Памятники',
   desc: 'История и наследие',
-  icon: <HistoryIcon className="w-6 h-6" />,
+  icon: <Pyramid className="w-6 h-6" />,
   reward: 5,
   gradient: 'from-orange-500 to-amber-600',
   bg: 'bg-orange-50'
