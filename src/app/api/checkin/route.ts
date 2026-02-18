@@ -24,6 +24,23 @@ function getMskWeek(): string {
   return `${msk.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
 }
 
+function shouldResetWeekly(lastWeeklyReset: string | null): boolean {
+  const now = new Date();
+  const mskNow = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
+  
+  // Сброс только в понедельник
+  if (mskNow.getDay() !== 1) return false;
+  
+  // И только после 00:10 МСК
+  const hours = mskNow.getHours();
+  const minutes = mskNow.getMinutes();
+  if (hours < 0 || (hours === 0 && minutes < 10)) return false;
+  
+  // Если lastWeeklyReset уже содержит текущую неделю - не сбрасываем
+  const currentWeek = getMskWeek();
+  return lastWeeklyReset !== currentWeek;
+}
+
 function haversineDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371e3;
   const toRad = (d: number) => d * Math.PI / 180;
@@ -148,7 +165,7 @@ export async function POST(req: NextRequest) {
     visitsToday = 0;
     dailyClaimed = false;
   }
-  if (stats.last_weekly_reset !== currentMskWeek) {
+  if (shouldResetWeekly(stats.last_weekly_reset)) {
     visitsThisWeek = 0;
     weeklyDays = 0;
     weeklyClaimed = false;
@@ -300,7 +317,7 @@ export async function POST(req: NextRequest) {
     .eq('user_id', vkId);
 
   if (statsError) {
-    return NextResponse.json({ error: statsError.message }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
   }
 
     // Insert visit record

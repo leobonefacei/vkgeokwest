@@ -56,6 +56,32 @@ export async function GET(req: NextRequest) {
   const currentMskDay = mskNow.toISOString().split('T')[0];
   const mskWeek = `${mskNow.getFullYear()}-W${String(Math.ceil((mskNow.getTime() - new Date(mskNow.getFullYear(), 0, 1).getTime()) / (7 * 24 * 60 * 60 * 1000))).padStart(2, '0')}`;
 
+  function getMskWeek(): string {
+    const d = new Date();
+    const msk = new Date(d.toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
+    const jan1 = new Date(msk.getFullYear(), 0, 1);
+    const dayOfYear = Math.floor((msk.getTime() - jan1.getTime()) / 86400000) + 1;
+    const weekNum = Math.ceil(dayOfYear / 7);
+    return `${msk.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
+  }
+
+  function shouldResetWeekly(lastWeeklyReset: string | null): boolean {
+    const nowInner = new Date();
+    const mskNowInner = new Date(nowInner.toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
+    
+    // Сброс только в понедельник
+    if (mskNowInner.getDay() !== 1) return false;
+    
+    // И только после 00:10 МСК
+    const hours = mskNowInner.getHours();
+    const minutes = mskNowInner.getMinutes();
+    if (hours < 0 || (hours === 0 && minutes < 10)) return false;
+    
+    // Если lastWeeklyReset уже содержит текущую неделю - не сбрасываем
+    const currentWeek = getMskWeek();
+    return lastWeeklyReset !== currentWeek;
+  }
+
   // Auto-reset counters if needed
   let visitsToday = stats?.visits_today || 0;
   let visitsThisWeek = stats?.visits_this_week || 0;
@@ -66,7 +92,7 @@ export async function GET(req: NextRequest) {
     visitsToday = 0;
     dailyClaimed = false;
   }
-  if (stats?.last_weekly_reset !== mskWeek) {
+  if (shouldResetWeekly(stats?.last_weekly_reset)) {
     visitsThisWeek = 0;
     weeklyClaimed = false;
   }

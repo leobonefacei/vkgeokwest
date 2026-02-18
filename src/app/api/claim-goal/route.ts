@@ -21,6 +21,23 @@ function getMskWeek(): string {
   return `${msk.getFullYear()}-W${String(weekNum).padStart(2, '0')}`;
 }
 
+function shouldResetWeekly(lastWeeklyReset: string | null): boolean {
+  const now = new Date();
+  const mskNow = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/Moscow' }));
+  
+  // Сброс только в понедельник
+  if (mskNow.getDay() !== 1) return false;
+  
+  // И только после 00:10 МСК
+  const hours = mskNow.getHours();
+  const minutes = mskNow.getMinutes();
+  if (hours < 0 || (hours === 0 && minutes < 10)) return false;
+  
+  // Если lastWeeklyReset уже содержит текущую неделю - не сбрасываем
+  const currentWeek = getMskWeek();
+  return lastWeeklyReset !== currentWeek;
+}
+
 /**
  * POST /api/claim-goal
  * Body: { type: "daily" | "weekly" }
@@ -86,16 +103,19 @@ export async function POST(req: NextRequest) {
       })
       .eq('user_id', vkId);
 
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
       auditLog(vkId, 'claim_daily', { visits: visitsToday, reward: DAILY_REWARD });
       return NextResponse.json({ success: true, message: 'Дневная цель выполнена!', coins: DAILY_REWARD });
   } else {
     // Weekly
-    if (stats.weekly_claimed && stats.last_weekly_reset === currentMskWeek) {
+    const isWeeklyReset = shouldResetWeekly(stats.last_weekly_reset);
+    const canClaimWeekly = isWeeklyReset || stats.last_weekly_reset !== currentMskWeek;
+    
+    if (stats.weekly_claimed && !canClaimWeekly) {
       return NextResponse.json({ success: false, message: 'Награда уже получена на этой неделе' });
     }
 
-    const visitsThisWeek = stats.last_weekly_reset === currentMskWeek ? (stats.visits_this_week || 0) : 0;
+    const visitsThisWeek = canClaimWeekly ? (stats.visits_this_week || 0) : 0;
     if (visitsThisWeek < WEEKLY_GOAL) {
       return NextResponse.json({ success: false, message: `Выполнено ${visitsThisWeek}/${WEEKLY_GOAL} посещений` });
     }
@@ -111,7 +131,7 @@ export async function POST(req: NextRequest) {
       })
       .eq('user_id', vkId);
 
-      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+      if (error) return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
       auditLog(vkId, 'claim_weekly', { visits: visitsThisWeek, reward: WEEKLY_REWARD });
       return NextResponse.json({ success: true, message: 'Недельная цель выполнена!', coins: WEEKLY_REWARD });
   }
