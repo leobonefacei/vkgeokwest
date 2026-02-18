@@ -2559,13 +2559,13 @@ export default function Home() {
 
       {/* Navigation */}
       <nav className="fixed bottom-8 left-4 right-4 z-40">
-        <div className="bg-white/80 backdrop-blur-2xl border border-white/50 p-3 rounded-[32px] shadow-[0_8px_32px_rgba(0,0,0,0.1)] flex items-center justify-around">
+        <div className="bg-white/80 backdrop-blur-2xl border border-white/50 p-3 rounded-[32px] shadow-[0_8px_32px_rgba(0,0,0,0.1)] flex items-center justify-between">
           {[
-          { id: 'main', label: 'Карта', icon: <MapIcon className="w-5 h-5" /> },
-          { id: 'quests', label: 'Квесты', icon: <Gamepad2 className="w-5 h-5" /> },
-          { id: 'history', label: 'История', icon: <HistoryIcon className="w-5 h-5" /> },
-          { id: 'rating', label: 'Рейтинг', icon: <Trophy className="w-5 h-5" /> },
-          { id: 'friends', label: 'Друзья', icon: <Users className="w-5 h-5" /> }].
+          { id: 'main', label: 'Карта', icon: <MapIcon className="w-4 h-4" /> },
+          { id: 'friends', label: 'Друзья', icon: <Users className="w-4 h-4" /> },
+          { id: 'quests', label: 'Квесты', icon: <Gamepad2 className="w-4 h-4" /> },
+          { id: 'history', label: 'История', icon: <HistoryIcon className="w-4 h-4" /> },
+          { id: 'rating', label: 'Рейтинг', icon: <Trophy className="w-4 h-4" /> }].
           map((tab) =>
           <button
             key={tab.id}
@@ -2574,14 +2574,14 @@ export default function Home() {
               if (tab.id === 'main') setIsExpanded(true);
             }}
             className={cn(
-              "flex flex-col items-center gap-1 px-4 py-2 rounded-2xl transition-all active:scale-90",
+              "flex-1 flex flex-col items-center gap-0.5 px-1 py-1.5 rounded-2xl transition-all active:scale-90",
               activeTab === tab.id ?
               "bg-blue-600 text-white shadow-lg shadow-blue-200" :
               "text-zinc-400 hover:text-zinc-600 hover:bg-zinc-50"
             )}>
 
               {tab.icon}
-              <span className="text-[8px] font-black uppercase tracking-wider">{tab.label}</span>
+              <span className="text-[7px] font-black uppercase tracking-wider">{tab.label}</span>
             </button>
           )}
         </div>
