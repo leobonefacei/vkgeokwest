@@ -160,6 +160,7 @@ export default function Home() {
   const [following, setFollowing] = useState<FriendProfile[]>([]);
   const [followers, setFollowers] = useState<FriendProfile[]>([]);
   const [isRefreshingFriends, setIsRefreshingFriends] = useState(false);
+  const [pendingUnfollowFriend, setPendingUnfollowFriend] = useState<FriendProfile | null>(null);
   const [selectedFriend, setSelectedFriend] = useState<FriendProfile | null>(null);
   const [selectedFriendStats, setSelectedFriendStats] = useState<{balance: number;history: any[];isPrivate?: boolean;} | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<any | null>(null);
@@ -336,13 +337,22 @@ export default function Home() {
     await FriendService.togglePrivacy(user.id, val);
   };
 
-  const handleUnfollow = async (e: React.MouseEvent, friendId: number) => {
+  const handleUnfollowClick = (e: React.MouseEvent, friend: FriendProfile) => {
     e.stopPropagation();
-    if (!user) return;
-    await FriendService.unfollow(user.id, friendId);
+    setPendingUnfollowFriend(friend);
+  };
+
+  const confirmUnfollow = async () => {
+    if (!user || !pendingUnfollowFriend) return;
+    await FriendService.unfollow(user.id, pendingUnfollowFriend.vk_id);
     await refreshFriends();
+    setPendingUnfollowFriend(null);
     setMessage('Пользователь удален из списка');
     setTimeout(() => setMessage(null), 3000);
+  };
+
+  const cancelUnfollow = () => {
+    setPendingUnfollowFriend(null);
   };
 
   const handleToggleBlock = async (followerId: number, currentBlocked: boolean) => {
@@ -1744,7 +1754,7 @@ export default function Home() {
                               </div>
                             </div>
                             <button
-                          onClick={(e) => handleUnfollow(e, friend.vk_id)}
+                          onClick={(e) => handleUnfollowClick(e, friend)}
                           className="w-10 h-10 bg-zinc-50 rounded-xl flex items-center justify-center text-zinc-400 active:scale-90 transition-all hover:bg-red-50 hover:text-red-500">
 
                               <UserMinus className="w-4 h-4" />
@@ -2420,10 +2430,50 @@ export default function Home() {
                     </div>
                 }
                 </div>
-              </motion.div>
-            </div>
-          }
-        </AnimatePresence>
+            </motion.div>
+          </div>
+        }
+
+        {/* Unfollow Confirmation Dialog */}
+        {pendingUnfollowFriend && 
+        <div className="fixed inset-0 z-[150] flex items-center justify-center p-6">
+            <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={cancelUnfollow}
+            className="absolute inset-0 bg-zinc-900/60 backdrop-blur-md" />
+
+            <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            className="relative w-full max-w-sm bg-white rounded-[40px] p-8 shadow-2xl text-center">
+
+              <div className="w-20 h-20 bg-red-50 rounded-[30px] flex items-center justify-center mx-auto mb-6">
+                <UserMinus className="w-10 h-10 text-red-500" />
+              </div>
+              <h3 className="text-2xl font-black mb-3">Прекратить отслеживание?</h3>
+              <p className="text-zinc-500 text-sm leading-relaxed mb-6">
+                Вы уверены, что хотите перестать отслеживать {pendingUnfollowFriend.first_name}? Вы больше не будете видеть его посещения на карте.
+              </p>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={cancelUnfollow}
+                  className="flex-1 py-3 px-4 bg-zinc-100 text-zinc-700 font-bold rounded-2xl transition-colors hover:bg-zinc-200">
+                  Отмена
+                </button>
+                <button
+                  onClick={confirmUnfollow}
+                  className="flex-1 py-3 px-4 bg-red-500 text-white font-bold rounded-2xl transition-colors hover:bg-red-600">
+                  Отписаться
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        }
+      </AnimatePresence>
 
         {/* Category Detail Modal */}
         {selectedCategory &&
