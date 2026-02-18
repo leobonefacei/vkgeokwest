@@ -5,11 +5,18 @@ import { authenticateRequest, isAuthError } from '@/lib/api-auth';
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!supabaseAdmin) return NextResponse.json({ error: 'DB unavailable' }, { status: 503 });
 
-  const auth = authenticateRequest(req);
-  if (isAuthError(auth)) return auth;
-
   const { id } = await params;
-  const vkId = auth.vk_user_id;
+
+  // Аутентификация опциональна - публичные данные возвращаем всегда
+  let vkId: number | null = null;
+  try {
+    const auth = authenticateRequest(req);
+    if (!isAuthError(auth)) {
+      vkId = auth.vk_user_id;
+    }
+  } catch {
+    // Без авторизации - продолжаем, но без данных пользователя
+  }
 
   // Get place details
   const { data: place, error: placeError } = await supabaseAdmin
@@ -28,17 +35,19 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     .select('*', { count: 'exact', head: true })
     .eq('place_id', id);
 
-  // Check if current user has visited this place
-  const { data: userVisit } = await supabaseAdmin
-    .from('user_visits')
-    .select('timestamp')
-    .eq('place_id', id)
-    .eq('user_id', vkId)
-    .order('timestamp', { ascending: false })
-    .limit(1)
-    .single();
-
-  const userHasVisited = !!userVisit;
+  // Check if current user has visited this place (only if authenticated)
+  let userHasVisited = false;
+  if (vkId) {
+    const { data: userVisit } = await supabaseAdmin
+      .from('user_visits')
+      .select('timestamp')
+      .eq('place_id', id)
+      .eq('user_id', vkId)
+      .order('timestamp', { ascending: false })
+      .limit(1)
+      .single();
+    userHasVisited = !!userVisit;
+  }
 
   // Get recent visitors (last 5)
   const { data: recentVisits } = await supabaseAdmin

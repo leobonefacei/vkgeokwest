@@ -1317,10 +1317,8 @@ export default function Home() {
                                     </div>
                                     
                                     {/* Status indicator */}
-                                    {scanStatus === 'scanning' ?
-                                <div className="w-6 h-6 border-2 border-white/50 border-t-white rounded-full animate-spin" /> :
-                                (scanStatus === 'success' || (!isLocked && catStats.count > 0)) ?
-                                <motion.div
+                                    {(scanStatus === 'success' || (!isLocked && catStats.count > 0)) ?
+                                    <motion.div
                                   initial={{ scale: 0 }}
                                   animate={{ scale: 1 }}
                                   className={cn("p-1 rounded-full", isLocked ? "bg-zinc-200 text-zinc-400" : "bg-green-400 text-white")}>
