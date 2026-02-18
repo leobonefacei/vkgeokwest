@@ -444,12 +444,48 @@ export default function Home() {
   };
 
   const getUserLocation = async (): Promise<[number, number]> => {
-    try {
-      // VK Bridge is the primary and recommended way for VK Mini Apps
-      console.log('Requesting geodata via VK Bridge...');
-      const data = await bridge.send('VKWebAppGetGeodata', {});
+    // Helper for browser geolocation fallback
+    const getBrowserLocation = (): Promise<[number, number]> => {
+      return new Promise((resolve) => {
+        if (typeof navigator !== 'undefined' && navigator.geolocation) {
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              setIsGeoActive(true);
+              resolve([pos.coords.latitude, pos.coords.longitude]);
+            },
+            () => {
+              setIsGeoActive(false);
+              resolve(RED_SQUARE);
+            },
+            { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+          );
+        } else {
+          setIsGeoActive(false);
+          resolve(RED_SQUARE);
+        }
+      });
+    };
 
-      if (data.available && typeof data.lat === 'number' && typeof data.long === 'number') {
+    try {
+      // VK Bridge is the primary way for VK Mini Apps
+      console.log('Requesting geodata via VK Bridge...');
+      
+      // Add timeout for VK Bridge - 5 seconds
+      const vkPromise = bridge.send('VKWebAppGetGeodata', {});
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('VK Bridge timeout')), 5000)
+      );
+      
+      let data: any;
+      try {
+        data = await Promise.race([vkPromise, timeoutPromise]);
+      } catch (vkErr) {
+        console.warn('VK Bridge timeout or error, using browser fallback:', vkErr);
+        setIsGeoActive(false);
+        return getBrowserLocation();
+      }
+
+      if (data && data.available && typeof data.lat === 'number' && typeof data.long === 'number') {
         console.log('VK Geodata received:', data.lat, data.long);
         setIsGeoActive(true);
         return [data.lat, data.long];
@@ -457,36 +493,23 @@ export default function Home() {
 
       console.warn('VK Geodata returned as unavailable:', data);
       setIsGeoActive(false);
-
-      // If we are in development mode on desktop, browser fallback is still useful
-      if (process.env.NODE_ENV === 'development') {
-        console.log('Development mode: attempting browser fallback...');
-        if (typeof navigator !== 'undefined' && navigator.geolocation) {
-          return new Promise((resolve) => {
-            navigator.geolocation.getCurrentPosition(
-              (pos) => {
-                setIsGeoActive(true);
-                resolve([pos.coords.latitude, pos.coords.longitude]);
-              },
-              () => {
-                setIsGeoActive(false);
-                resolve(RED_SQUARE);
-              },
-              { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
-            );
-          });
-        }
-      }
+      
+      // Browser fallback - works on both mobile and desktop
+      console.log('Using browser geolocation fallback...');
+      return getBrowserLocation();
+      
     } catch (err: any) {
       console.error('VK Bridge geodata error:', err);
       setIsGeoActive(false);
+      
       // Special handling for user rejection
       if (err.error_data?.error_code === 4) {
         console.warn('User rejected geodata request');
       }
+      
+      // Try browser fallback as last resort
+      return getBrowserLocation();
     }
-
-    return RED_SQUARE;
   };
 
   useEffect(() => {
@@ -1814,13 +1837,13 @@ export default function Home() {
             }}
             className="absolute bottom-0 left-0 right-0 bg-white rounded-t-[48px] p-8 max-h-[85vh] overflow-y-auto touch-none">
 
-              <div className="w-12 h-1.5 bg-zinc-200 rounded-full mx-auto mb-8 cursor-grab active:cursor-grabbing" />
+              <div className="w-12 h-1.5 bg-zinc-200 rounded-full mx-auto mb-8 cursor-grab active:cursor-grabbing pointer-events-none" />
               
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-3xl font-black">Настройки</h2>
                 <button
                 onClick={() => setShowProfile(false)}
-                className="w-12 h-12 rounded-2xl bg-zinc-50 flex items-center justify-center active:scale-90 transition-all">
+                className="w-12 h-12 rounded-2xl bg-zinc-50 flex items-center justify-center active:scale-90 transition-all cursor-pointer hover:bg-zinc-100 z-50 relative">
 
                   <X className="w-6 h-6" />
                 </button>
@@ -2535,7 +2558,7 @@ export default function Home() {
             }}
             className="relative w-full bg-white rounded-t-[48px] p-8 max-h-[85vh] overflow-y-auto pointer-events-auto">
 
-            <div className="w-12 h-1.5 bg-zinc-200 rounded-full mx-auto mb-8 cursor-grab active:cursor-grabbing" />
+            <div className="w-12 h-1.5 bg-zinc-200 rounded-full mx-auto mb-8 cursor-grab active:cursor-grabbing pointer-events-none" />
 
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-2xl font-black">О месте</h2>
@@ -2544,8 +2567,8 @@ export default function Home() {
                 setSelectedLocation(null);
                 setSelectedLocationStats(null);
               }}
-              className="w-12 h-12 rounded-2xl bg-zinc-50 flex items-center justify-center active:scale-90 transition-all">
-                <X className="w-6 h-6" />
+                className="w-12 h-12 rounded-2xl bg-zinc-50 flex items-center justify-center active:scale-90 transition-all cursor-pointer hover:bg-zinc-100 z-50 relative">
+                  <X className="w-6 h-6" />
               </button>
             </div>
 
