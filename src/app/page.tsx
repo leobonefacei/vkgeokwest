@@ -326,6 +326,8 @@ export default function Home() {
   useEffect(() => {
     if (activeTab === 'rating') {
       fetchRanking();
+    } else if (activeTab === 'wallet') {
+      if (ranking.length === 0) fetchRanking();
     } else if (activeTab === 'history' || activeTab === 'main') {
       refreshData();
     }
