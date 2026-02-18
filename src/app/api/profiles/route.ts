@@ -1,40 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-server';
 import { authenticateRequest, isAuthError } from '@/lib/api-auth';
-
-// SECURITY: Allowed domains for photo_200 field (VK CDN only)
-const ALLOWED_PHOTO_HOSTS = [
-  'vk.com',
-  'userapi.com',
-  'vk-cdn.net',
-  'vkontakte.ru',
-  'vk.me',
-  'pp.vk.me',
-  'vkmessenger.com',
-];
-
-function isAllowedPhotoUrl(url: string): boolean {
-  if (!url || typeof url !== 'string') return false;
-  try {
-    const parsed = new URL(url);
-    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return false;
-    const host = parsed.hostname.toLowerCase();
-    
-    // Check exact matches first
-    if (ALLOWED_PHOTO_HOSTS.includes(host)) return true;
-    
-    // Check VK sun* subdomains (sun1-, sun2-, ... sun64-.userapi.com)
-    const sunMatch = host.match(/^sun(\d+)-\d+\.userapi\.com$/);
-    if (sunMatch) return true;
-    
-    // Check other vk subdomains (cs1-, cs2-, etc.)
-    if (host.includes('.vk.com') || host.includes('.vkontakte.ru')) return true;
-    
-    return false;
-  } catch {
-    return false;
-  }
-}
+import { isAllowedPhotoUrl } from '@/lib/utils';
 
 export async function GET(req: NextRequest) {
   if (!supabaseAdmin) return NextResponse.json({ error: 'DB unavailable' }, { status: 503 });

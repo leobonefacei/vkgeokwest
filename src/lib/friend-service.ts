@@ -1,5 +1,6 @@
 
 import { getRawLaunchParams } from './vk-context';
+import { isAllowedPhotoUrl } from './utils';
 
 async function callAPI(url: string, body: Record<string, any>): Promise<any> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -14,7 +15,8 @@ export interface FriendProfile {
   vk_id: number;
   first_name: string;
   last_name: string;
-  photo_200: string;
+  photo_200?: string;
+  photo_100?: string;
   last_lat?: number;
   last_lon?: number;
   last_category?: string;
@@ -28,12 +30,18 @@ export interface FriendProfile {
 export const FriendService = {
   async ensureProfile(profile: FriendProfile) {
     try {
+      let avatarToSave = profile.photo_200;
+      
+      if (!avatarToSave || !isAllowedPhotoUrl(avatarToSave)) {
+        avatarToSave = profile.photo_100;
+      }
+
       await callAPI('/api/profiles', {
         action: 'upsert',
         vk_id: profile.vk_id,
         first_name: profile.first_name,
         last_name: profile.last_name,
-        photo_200: profile.photo_200,
+        photo_200: avatarToSave,
       });
     } catch (err) {
       console.error('Failed to ensure profile:', err);

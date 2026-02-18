@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase-server';
 import { authenticateRequest, isAuthError } from '@/lib/api-auth';
 import { checkRateLimit } from '@/lib/rate-limit';
 import { auditLog } from '@/lib/audit-log';
+import { isAllowedPhotoUrl } from '@/lib/utils';
 
 // Admin VK IDs — these users can modify other users' data
 const ADMIN_VK_IDS = new Set([35645976]);
@@ -53,34 +54,6 @@ const WRITE_ALLOWED_TABLES = new Set([
 const BLOCKED_SESSION_FIELDS = new Set([
   'survival_time_seconds',
 ]);
-
-// SECURITY: Allowed domains for photo_200 field (VK CDN only)
-const ALLOWED_PHOTO_HOSTS = [
-  'vk.com',
-  'userapi.com',
-  'vk-cdn.net',
-  'vkontakte.ru',
-  'vk.me',
-  'pp.vk.me',
-  'vkmessenger.com',
-  'sun1-',
-  'sun9-',
-];
-
-function isAllowedPhotoUrl(url: string): boolean {
-  if (!url || typeof url !== 'string') return false;
-  try {
-    const parsed = new URL(url);
-    if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return false;
-    const host = parsed.hostname.toLowerCase();
-    
-    return ALLOWED_PHOTO_HOSTS.some(allowed =>
-      host === allowed || host.endsWith('.' + allowed) || host.startsWith(allowed)
-    );
-  } catch {
-    return false;
-  }
-}
 
 // Sanitize photo_200 in profiles writes — prevent IP harvesting via external URLs
 function sanitizeProfileData(row: any): void {

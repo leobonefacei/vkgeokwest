@@ -428,7 +428,8 @@ export default function Home() {
             vk_id: friend.id,
             first_name: friend.first_name,
             last_name: friend.last_name,
-            photo_200: friend.photo_200
+            photo_200: friend.photo_200,
+            photo_100: friend.photo_100
           });
           // 2. Follow in DB
           await FriendService.followFriend(user.id, friend.id);
@@ -531,7 +532,8 @@ export default function Home() {
           vk_id: user.id,
           first_name: user.first_name,
           last_name: user.last_name,
-          photo_200: user.photo_200
+          photo_200: user.photo_200,
+          photo_100: user.photo_100
         });
         setLoadingProgress(30);
 
