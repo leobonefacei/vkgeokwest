@@ -21,7 +21,9 @@ async function callAPI(url: string, body: Record<string, any>): Promise<any> {
   const lp = getRawLaunchParams();
   if (lp) headers['X-Launch-Params'] = lp;
 
-  const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
+  const isEmptyBody = Object.keys(body).length === 0;
+  const method = isEmptyBody ? 'GET' : 'POST';
+  const res = await fetch(url, { method, headers, body: isEmptyBody ? undefined : JSON.stringify(body) });
   return res.json();
 }
 

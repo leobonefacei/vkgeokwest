@@ -1379,7 +1379,7 @@ export default function Home() {
                     className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-lg shadow-blue-900/20"
                   >
                     <MessageCircle className="w-4 h-4" />
-                    Есть идеи и предложения? В чат-беседу
+                    Есть идеи?
                   </a>
                 </div>
                 
