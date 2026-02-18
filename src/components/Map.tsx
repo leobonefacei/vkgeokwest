@@ -118,7 +118,7 @@ export default function KnowledgeMap(props: MapProps) {
 
         map.current = new (maptilersdk as any).Map({
           container: mapContainer.current!,
-          style: maptilersdk.MapStyle.STREETS,
+          style: 'https://api.maptiler.com/maps/019c719e-531e-7e0d-b6f6-9b752706d1ce/style.json?key=wIfs08UziK6xJeBmZMgv',
           center: [centerPos[1], centerPos[0]],
           zoom: 16,
           pitch: 55,
@@ -147,27 +147,6 @@ export default function KnowledgeMap(props: MapProps) {
               'fill-outline-color': '#4A90E2'
             }
           });
-
-          // Set disputed borders to show Russian perspective
-          const showDisputedBorders = (countryCode: string) => {
-            const claimed_by_countries = ["RU", "UA", "XN", "AM", "XK", "IN", "PK", "CN", "NP", "BT", "TR", "SY", "PS", "IL", "SY", "ET", "EH", "SD", "SS", "KE"];
-            if (!claimed_by_countries.includes(countryCode)) return;
-            
-            if (map.current?.getLayer("boundary_2_z5_disputed")) {
-              const boundary_disputed = map.current.getLayer("boundary_2_z5_disputed");
-              if (boundary_disputed && boundary_disputed.filter) {
-                map.current.setFilter("boundary_2_z5_disputed", [...(boundary_disputed.filter as any[]), ["==", "claimed_by", countryCode]]);
-              }
-            }
-            if (map.current?.getLayer("boundary_2_z5_disputed_maritime")) {
-              const boundary_disputed_maritime = map.current.getLayer("boundary_2_z5_disputed_maritime");
-              if (boundary_disputed_maritime && boundary_disputed_maritime.filter) {
-                map.current.setFilter("boundary_2_z5_disputed_maritime", [...(boundary_disputed_maritime.filter as any[]), ["==", "claimed_by", countryCode]]);
-              }
-            }
-          };
-          
-          showDisputedBorders('RU');
         }
       });
 
