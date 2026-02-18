@@ -436,8 +436,24 @@ export default function Home() {
     try {
       const data = await bridge.send('VKWebAppGetFriends', { multi: true });
       if (data && data.users && data.users.length > 0) {
+        // Get existing following IDs to filter duplicates
+        const existingFollowingIds = new Set(following.map(f => f.vk_id));
+        
+        // Filter out already following friends
+        const newFriends = data.users.filter((friend: any) => !existingFollowingIds.has(friend.id));
+        const duplicateCount = data.users.length - newFriends.length;
+        
+        if (newFriends.length === 0) {
+          setMessage(duplicateCount > 0 
+            ? `${duplicateCount} друг(ей) уже в вашем списке` 
+            : 'Нет новых друзей для добавления');
+          setMessageType('info');
+          setTimeout(() => setMessage(null), 3000);
+          return;
+        }
+        
         // Create skeleton friends - show immediately as loading
-        const skeletonFriends: FriendProfile[] = data.users.map((friend: any) => ({
+        const skeletonFriends: FriendProfile[] = newFriends.map((friend: any) => ({
           vk_id: friend.id,
           first_name: friend.first_name,
           last_name: friend.last_name,
@@ -453,7 +469,7 @@ export default function Home() {
         // Save in background
         (async () => {
           try {
-            for (const friend of data.users) {
+            for (const friend of newFriends) {
               await FriendService.ensureProfile({
                 vk_id: friend.id,
                 first_name: friend.first_name,
@@ -469,7 +485,11 @@ export default function Home() {
           }
         })();
         
-        setMessage(`Добавлено друзей: ${data.users.length}`);
+        let message = `Добавлено друзей: ${newFriends.length}`;
+        if (duplicateCount > 0) {
+          message += ` (${duplicateCount} уже был${duplicateCount === 1 ? '' : 'о'})`;
+        }
+        setMessage(message);
         setMessageType('info');
         setTimeout(() => setMessage(null), 3000);
       }
