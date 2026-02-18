@@ -11,8 +11,6 @@ const ALLOWED_PHOTO_HOSTS = [
   'vk.me',
   'pp.vk.me',
   'vkmessenger.com',
-  'sun1-',
-  'sun9-',
 ];
 
 function isAllowedPhotoUrl(url: string): boolean {
@@ -22,9 +20,17 @@ function isAllowedPhotoUrl(url: string): boolean {
     if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return false;
     const host = parsed.hostname.toLowerCase();
     
-    return ALLOWED_PHOTO_HOSTS.some(allowed =>
-      host === allowed || host.endsWith('.' + allowed) || host.startsWith(allowed)
-    );
+    // Check exact matches first
+    if (ALLOWED_PHOTO_HOSTS.includes(host)) return true;
+    
+    // Check VK sun* subdomains (sun1-, sun2-, ... sun64-.userapi.com)
+    const sunMatch = host.match(/^sun(\d+)-\d+\.userapi\.com$/);
+    if (sunMatch) return true;
+    
+    // Check other vk subdomains (cs1-, cs2-, etc.)
+    if (host.includes('.vk.com') || host.includes('.vkontakte.ru')) return true;
+    
+    return false;
   } catch {
     return false;
   }
