@@ -46,8 +46,11 @@ import {
   Radar,
   BookA,
   Landmark,
-  Pyramid } from
+  Pyramid,
+  Lock,
+  EyeOff } from
 'lucide-react';
+import * as Switch from '@radix-ui/react-switch';
 import bridge from '@vkontakte/vk-bridge';
 import { useVKBridge, getRawLaunchParams } from '@/lib/vk-context';
 import { UmnicoinService, UserStats, Location } from '@/lib/umnicoin-service';
@@ -158,7 +161,7 @@ export default function Home() {
   const [followers, setFollowers] = useState<FriendProfile[]>([]);
   const [isRefreshingFriends, setIsRefreshingFriends] = useState(false);
   const [selectedFriend, setSelectedFriend] = useState<FriendProfile | null>(null);
-  const [selectedFriendStats, setSelectedFriendStats] = useState<{balance: number;history: any[];} | null>(null);
+  const [selectedFriendStats, setSelectedFriendStats] = useState<{balance: number;history: any[];isPrivate?: boolean;} | null>(null);
   const [selectedLocation, setSelectedLocation] = useState<any | null>(null);
   const [selectedLocationStats, setSelectedLocationStats] = useState<{totalVisits: number; userHasVisited: boolean; recentVisitors: any[];} | null>(null);
   const [isLoadingLocation, setIsLoadingLocation] = useState(false);
@@ -364,10 +367,11 @@ export default function Home() {
   const handleFriendClick = async (friend: FriendProfile) => {
     setSelectedFriend(friend);
     try {
-      const history = await FriendService.getFriendHistory(friend.vk_id);
+      const historyData = await FriendService.getFriendHistory(friend.vk_id);
       setSelectedFriendStats({
         balance: friend.points || 0,
-        history: history || []
+        history: historyData?.data || [],
+        isPrivate: historyData?.is_private || friend.is_private
       });
     } catch (err) {
       console.error('Failed to fetch friend details:', err);
@@ -1054,7 +1058,7 @@ export default function Home() {
                   <Map
                 userPos={userPos}
                 locations={locations}
-                friends={following}
+                friends={following.filter(f => !f.is_private)}
                 offsetY={isExpanded ? 50 : 0}
                 onFriendClick={handleFriendClick}
                 onLocationClick={handleLocationClick}
@@ -1641,7 +1645,17 @@ export default function Home() {
 
               <div className="flex items-center justify-between mb-8 px-2">
                 <h2 className="text-3xl font-black">Друзья</h2>
-                <div className="flex gap-2">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 mr-2">
+                    {isPrivate ? <Lock className="w-4 h-4 text-zinc-400" /> : <EyeOff className="w-4 h-4 text-zinc-400" />}
+                    <Switch.Root
+                      checked={isPrivate}
+                      onCheckedChange={handleTogglePrivacy}
+                      className="w-11 h-6 bg-zinc-200 rounded-full relative data-[state=checked]:bg-blue-600 transition-colors outline-none cursor-pointer"
+                    >
+                      <Switch.Thumb className="block w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-100 translate-x-0.5 will-change-transform data-[state=checked]:translate-x-[22px]" />
+                    </Switch.Root>
+                  </div>
                   <button
                   onClick={handleAddFriend}
                   className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-200 active:scale-90 transition-all text-white">
@@ -1680,11 +1694,20 @@ export default function Home() {
                       className="w-12 h-12 rounded-2xl object-cover bg-zinc-100" />
 
                         <div className="flex-1 min-w-0">
-                          <h4 className="font-black text-sm text-zinc-900 truncate">{formatName(friend.first_name, friend.last_name)}</h4>
+                          <h4 className="font-black text-sm text-zinc-900 truncate flex items-center gap-2">
+                            {formatName(friend.first_name, friend.last_name)}
+                            {friend.is_private && <Lock className="w-3 h-3 text-zinc-400" />}
+                          </h4>
                           <div className="flex items-center gap-2 mt-0.5">
-                            <Gem className="w-3 h-3 text-blue-500 fill-current" />
-                            <span className="text-xs font-black text-blue-600">{friend.points || 0}</span>
-                            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider ml-1">Нажмите для просмотра</span>
+                            {friend.is_private ? (
+                              <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Приватный</span>
+                            ) : (
+                              <>
+                                <Gem className="w-3 h-3 text-blue-500 fill-current" />
+                                <span className="text-xs font-black text-blue-600">{friend.points || 0}</span>
+                                <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider ml-1">Нажмите для просмотра</span>
+                              </>
+                            )}
                           </div>
                         </div>
                         <button
@@ -2497,7 +2520,12 @@ export default function Home() {
                   <div>
                     <h4 className="font-black text-sm text-zinc-900 mb-3">Последние посещения</h4>
                     <div className="space-y-2 max-h-48 overflow-y-auto">
-                      {selectedFriendStats.history.length > 0 ? selectedFriendStats.history.slice(0, 5).map((visit: any, idx: number) =>
+                      {selectedFriendStats.isPrivate ? (
+                        <div className="flex items-center justify-center gap-2 p-4 bg-zinc-50 rounded-xl">
+                          <Lock className="w-4 h-4 text-zinc-400" />
+                          <p className="text-center text-zinc-400 text-sm">Приватная история</p>
+                        </div>
+                      ) : selectedFriendStats.history.length > 0 ? selectedFriendStats.history.slice(0, 5).map((visit: any, idx: number) =>
                   <div key={idx} className="flex items-center gap-3 p-3 bg-zinc-50 rounded-xl">
                           <div className="w-8 h-8 bg-indigo-100 rounded-lg flex items-center justify-center text-indigo-600 font-black text-xs">
                             {visit.category?.[0] || '?'}

@@ -154,7 +154,7 @@ export const FriendService = {
       
       const result = await fetch(`/api/friends?action=history&vk_id=${vkId}&limit=${limit}`, { headers });
       const data = await result.json();
-      return data?.data || [];
+      return data || { data: [], is_private: false };
     } catch (err) {
       console.error('Failed to get friend history:', err);
       return [];

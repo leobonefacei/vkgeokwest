@@ -48,11 +48,10 @@ export async function GET(req: NextRequest) {
           vk_id: profile.vk_id,
           first_name: profile.first_name,
           last_name: profile.last_name,
-          photo_200: profile.photo_200,
+          photo_200: null,
           points,
           is_private: true,
           is_blocked_by_them: isBlockedByThem,
-          // Sensitive data hidden
           last_lat: null,
           last_lon: null,
           last_category: null,
@@ -110,7 +109,7 @@ export async function GET(req: NextRequest) {
       .eq('vk_id', Number(targetVkId))
       .single();
 
-    if (profile?.is_private) return NextResponse.json({ data: [] });
+    if (profile?.is_private) return NextResponse.json({ data: [], is_private: true });
 
     const { data, error } = await supabaseAdmin
       .from('user_visits')
