@@ -2055,7 +2055,7 @@ export default function Home() {
                 <div className="bg-blue-50 rounded-2xl p-4 mb-4 text-left">
                   <p className="text-xs font-bold text-blue-700 mb-2">Как включить GPS:</p>
                   <ol className="text-xs text-blue-600 space-y-1 list-decimal list-inside">
-                    <li>Откройте <b>Настройки</b> телефона</li>
+                    <li>Откройте <b>Настройки</b></li>
                     <li>Перейдите в <b>Местоположение</b> (Геолокация)</li>
                     <li>Включите GPS и разрешите доступ для <b>VK</b></li>
                   </ol>
