@@ -152,8 +152,20 @@ export async function POST(req: NextRequest) {
       const { following_id } = body;
       if (!following_id) return NextResponse.json({ error: 'following_id required' }, { status: 400 });
       
+      // Check if record already exists to preserve is_blocked status
+      const { data: existing } = await supabaseAdmin
+        .from('follows')
+        .select('is_blocked')
+        .eq('follower_id', vkId)
+        .eq('following_id', following_id)
+        .single();
+      
       const { error } = await supabaseAdmin.from('follows').upsert(
-        { follower_id: vkId, following_id, is_blocked: false },
+        { 
+          follower_id: vkId, 
+          following_id, 
+          is_blocked: existing ? existing.is_blocked : false 
+        },
         { onConflict: 'follower_id,following_id' }
       );
       if (error) {
