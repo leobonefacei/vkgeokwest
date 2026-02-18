@@ -1338,105 +1338,50 @@ export default function Home() {
               <div className="w-full max-w-md mx-auto space-y-6">
                 <h2 className="text-3xl font-black text-zinc-900 tracking-tighter text-center mb-8">Квесты</h2>
                 
-                {/* Zombie Mode Quest Banner - Clickable */}
-                <button
-                onClick={() => setShowZombieMode(true)}
-                className="w-full text-left relative overflow-hidden bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 rounded-[32px] p-5 active:scale-[0.98] transition-transform">
-
+                {/* Zombie Mode Info Banner */}
+                <div className="w-full text-left relative overflow-hidden bg-gradient-to-br from-zinc-900 via-zinc-800 to-zinc-900 rounded-[32px] p-6 shadow-xl border border-white/5">
                   {/* Glow effects */}
                   <div className="absolute -top-20 -left-20 w-40 h-40 bg-green-500/30 rounded-full blur-3xl" />
                   <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-lime-500/20 rounded-full blur-2xl" />
                   
-                  {/* Play Badge */}
-                  <div className="absolute top-4 right-4 bg-gradient-to-r from-green-500 to-lime-400 text-black text-[10px] font-black px-4 py-2 rounded-full uppercase tracking-wider shadow-lg shadow-green-500/30 flex items-center gap-1.5">
-                    <Gamepad2 className="w-4 h-4" />
-                    Играть
+                  {/* Status Badge */}
+                  <div className="absolute top-4 right-4 bg-zinc-700/50 backdrop-blur-md text-zinc-300 text-[10px] font-black px-4 py-2 rounded-full uppercase tracking-wider flex items-center gap-1.5 border border-white/5">
+                    <Clock className="w-3.5 h-3.5" />
+                    Скоро
                   </div>
                   
                   {/* Image with decorative frame */}
-                  <div className="relative mb-4">
-                    <div className="absolute inset-0 bg-gradient-to-r from-green-500 via-lime-400 to-green-500 rounded-2xl blur-sm opacity-60" />
-                    <div className="relative rounded-2xl overflow-hidden border-2 border-green-500/50">
-                      <div className="w-full h-36 bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center">
+                  <div className="relative mb-6">
+                    <div className="absolute inset-0 bg-gradient-to-r from-green-500 via-lime-400 to-green-500 rounded-2xl blur-sm opacity-40" />
+                    <div className="relative rounded-2xl overflow-hidden border border-white/10">
+                      <div className="w-full h-32 bg-gradient-to-br from-zinc-800 to-zinc-900 flex items-center justify-center">
                         <div className="relative">
-                          <div className="w-20 h-20 bg-gradient-to-br from-green-600 to-lime-500 rounded-full flex items-center justify-center shadow-2xl shadow-green-500/50">
-                            <span className="text-4xl">🧟</span>
-                          </div>
-                          <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-red-500 rounded-full flex items-center justify-center border-2 border-zinc-900">
-                            <Skull className="w-4 h-4 text-white" />
+                          <div className="w-16 h-16 bg-gradient-to-br from-green-600 to-lime-500 rounded-full flex items-center justify-center shadow-2xl shadow-green-500/30">
+                            <span className="text-3xl opacity-80">🧟</span>
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
                   
-                  {/* Title */}
-                  <h3 className="text-2xl font-black text-white mb-2 tracking-tight">
-                    Режим Зомби
+                  <h3 className="text-2xl font-black text-white mb-3 tracking-tight">
+                    Зомби-апокалипсис
                   </h3>
                   
-                  {/* Description */}
-                  <p className="text-zinc-400 text-sm leading-relaxed mb-4 !whitespace-pre-line">Выживайте в зомби-апокалипсисе в реальном мире. Исследуйте
-
-                </p>
+                  <p className="text-zinc-400 text-sm leading-relaxed mb-6 font-medium">
+                    Уважаемые сталкеры, спасибо за тестирование квеста. Квест "Зомби-апокалипсис" ждёт своих выживальщиков в 2026 году 1 сентября.
+                  </p>
                   
-                {/* Stats */}
-                    <div className="flex gap-2 mb-4">
-                      <div className="flex-1 bg-zinc-800/80 backdrop-blur rounded-2xl p-2.5 text-center border border-zinc-700/50">
-                        <Skull className="w-4 h-4 text-red-500 mx-auto mb-0.5" />
-                        <span className="text-white font-black text-sm block">{zombieStats?.total_deaths || 0}</span>
-                        <span className="text-zinc-500 text-[9px] font-bold uppercase tracking-wider">смертей</span>
-                      </div>
-                      <div className="flex-1 bg-zinc-800/80 backdrop-blur rounded-2xl p-2.5 text-center border border-zinc-700/50">
-                        <Timer className="w-4 h-4 text-green-500 mx-auto mb-0.5" />
-                        <span className="text-white font-black text-sm block">
-                          {zombieStats ? StatsService.formatSurvivalTime(zombieStats.best_survival_time_seconds) : '—'}
-                        </span>
-                        <span className="text-zinc-500 text-[9px] font-bold uppercase tracking-wider">рекорд</span>
-                      </div>
-                      <div className="flex-1 bg-zinc-800/80 backdrop-blur rounded-2xl p-2.5 text-center border border-zinc-700/50">
-                        <BookOpen className="w-4 h-4 text-yellow-500 mx-auto mb-0.5" />
-                        <span className="text-white font-black text-sm block">{zombieStats?.zombies_educated || 0}</span>
-                        <span className="text-zinc-500 text-[9px] font-bold uppercase tracking-wider">образовано</span>
-                      </div>
-                    </div>
-                    
-                    {/* TOP-3 Leaderboard */}
-                    {zombieLeaderboard.length > 0 &&
-                <div className="bg-zinc-800/60 backdrop-blur rounded-2xl p-3 border border-zinc-700/50">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Trophy className="w-4 h-4 text-yellow-500" />
-                          <span className="text-zinc-300 text-xs font-bold uppercase tracking-wider">Топ-3 выживших</span>
-                        </div>
-                        <div className="space-y-1.5">
-                          {zombieLeaderboard.map((player, index) =>
-                    <div key={player.vk_id || index} className="flex items-center gap-2">
-                              <span className="text-lg w-6 text-center">
-                                {index === 0 ? '🥇' : index === 1 ? '🥈' : '🥉'}
-                              </span>
-                              {player.photo_200 ?
-                      <img
-                        src={player.photo_200}
-                        alt=""
-                        className="w-6 h-6 rounded-full object-cover border border-zinc-600" /> :
-
-
-                      <div className="w-6 h-6 rounded-full bg-zinc-700 flex items-center justify-center text-xs text-zinc-400">
-                                  {player.first_name[0]}
-                                </div>
-                      }
-                              <span className="text-zinc-300 text-sm flex-1 truncate">
-                                {player.first_name} {player.last_name?.[0] ? `${player.last_name[0]}.` : ''}
-                              </span>
-                              <span className="text-green-400 text-xs font-bold">
-                                {StatsService.formatSurvivalTime(player.best_survival_time_seconds)}
-                              </span>
-                            </div>
-                    )}
-                        </div>
-                      </div>
-                }
-                </button>
+                  <a
+                    href="https://vk.me/join/ClQF8cb557n5YW3YYF9wcOIrUevgsOPYgDg="
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 text-white font-black text-xs uppercase tracking-widest rounded-2xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all shadow-lg shadow-blue-900/20"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    Есть идеи и предложения? В чат-беседу
+                  </a>
+                </div>
                 
                 {/* Secret Quest Banner - Coming Soon */}
                 <div className="relative overflow-hidden bg-gradient-to-br from-indigo-900 via-purple-900 to-indigo-900 rounded-[32px] p-5 opacity-80">
