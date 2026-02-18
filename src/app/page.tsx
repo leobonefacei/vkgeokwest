@@ -271,6 +271,18 @@ export default function Home() {
     setTimeout(() => setMessage(null), 3000);
   };
 
+  const refreshData = async () => {
+    if (!user) return;
+    try {
+      await UmnicoinService.syncUserVisits(user.id);
+      const updatedStats = UmnicoinService.getUserData();
+      setStats(updatedStats);
+      setLocations(UmnicoinService.getAllLocations());
+    } catch (err) {
+      console.error('Failed to refresh data:', err);
+    }
+  };
+
   const fetchRanking = async () => {
     setIsLoadingRanking(true);
     const data = await UmnicoinService.getRealRanking();
@@ -281,14 +293,15 @@ export default function Home() {
   const refreshHistory = async () => {
     if (!user) return;
     setIsRefreshingHistory(true);
-    await UmnicoinService.syncUserVisits(user.id);
-    setStats(UmnicoinService.getUserData());
+    await refreshData();
     setIsRefreshingHistory(false);
   };
 
   useEffect(() => {
     if (activeTab === 'rating') {
       fetchRanking();
+    } else if (activeTab === 'history' || activeTab === 'main') {
+      refreshData();
     }
   }, [activeTab]);
 
@@ -633,7 +646,7 @@ export default function Home() {
       setScanTotalCoins(totalCoins);
     }
 
-    setStats(UmnicoinService.getUserData());
+    await refreshData();
     setScanDone(true);
     setIsScanning(false);
     isScanningRef.current = false;
@@ -782,7 +795,7 @@ export default function Home() {
       if (result.success) {
         setSuccessData({ message: result.message, coins: result.coins || 5 });
         setShowSuccess(true);
-        setStats(UmnicoinService.getUserData());
+        await refreshData();
       } else {
         setMessage(result.message);
         setMessageType('error');
@@ -802,7 +815,7 @@ export default function Home() {
     setIsClaimingGoal(false);
 
     if (result.success) {
-      setStats(UmnicoinService.getUserData());
+      await refreshData();
       setSuccessData({ message: result.message, coins: result.coins! });
       setShowGoalDetails(null);
       setShowSuccess(true);

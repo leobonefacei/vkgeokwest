@@ -83,6 +83,8 @@ export async function GET(req: NextRequest) {
       categoryCooldowns: stats?.category_cooldowns || {},
       dailyClaimed,
       weeklyClaimed,
+      lastDailyReset: currentMskDay,
+      lastWeeklyReset: mskWeek,
     },
     visits: visits || []
   });

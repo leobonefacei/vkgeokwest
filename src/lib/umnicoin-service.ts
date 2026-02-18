@@ -27,6 +27,7 @@ async function callAPI(url: string, body: Record<string, any>): Promise<any> {
 
 export interface Location {
   id: string;
+  osmId?: string;
   name: string;
   category: 'Школа' | 'Вуз' | 'Библиотека' | 'Музей' | 'Колледж' | 'Памятник';
   lat: number;
@@ -39,6 +40,7 @@ export interface Location {
 export interface Visit {
   id: string;
   locationId: string;
+  osmId?: string;
   locationName: string;
   category: string;
   timestamp: number;
@@ -95,6 +97,7 @@ export const UmnicoinService = {
             if (!dynamicLocations.find(dl => dl.id === p.id)) {
               dynamicLocations.push({
                 id: p.id,
+                osmId: p.osm_id,
                 name: p.name,
                 category: p.category as any,
                 lat: p.lat,
@@ -138,6 +141,7 @@ export const UmnicoinService = {
 
         return {
           id: `osm-${el.id}`,
+          osmId: `osm-${el.id}`,
           name: tags.name || tags['name:ru'] || (category === 'Школа' ? 'Школа' : category),
           category,
           lat: el.lat || el.center?.lat,
@@ -186,12 +190,12 @@ export const UmnicoinService = {
         stats.visitsToday = result.stats.visitsToday || 0;
         stats.visitsThisWeek = result.stats.visitsThisWeek || 0;
         stats.weeklyDays = result.stats.weeklyDays || 0;
-        stats.lastCheckIn = result.stats.lastCheckIn || 0;
+        stats.lastCheckIn = result.stats.lastCheckIn ? new Date(result.stats.lastCheckIn).getTime() : 0;
         stats.categoryCooldowns = result.stats.categoryCooldowns || {};
         stats.dailyClaimed = result.stats.dailyClaimed || false;
         stats.weeklyClaimed = result.stats.weeklyClaimed || false;
-        stats.lastDailyReset = getMskDay();
-        stats.lastWeeklyReset = getMskWeek();
+        stats.lastDailyReset = result.stats.lastDailyReset || getMskDay();
+        stats.lastWeeklyReset = result.stats.lastWeeklyReset || getMskWeek();
         
         if (result.visits) {
           stats.history = result.visits.map((dv: any) => ({
@@ -253,7 +257,10 @@ export const UmnicoinService = {
     });
 
     return combined.map(loc => {
-      const visit = stats.history.find(h => h.locationId === loc.id);
+      const visit = stats.history.find(h => 
+        h.locationId === loc.id || 
+        (h.lat && h.lon && Math.abs(h.lat - loc.lat) < 0.0001 && Math.abs(h.lon - loc.lon) < 0.0001)
+      );
       if (visit) {
         return { ...loc, isMined: true, minedAt: visit.timestamp };
       }
